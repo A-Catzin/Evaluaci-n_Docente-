@@ -7,6 +7,7 @@ Este documento define la organización del repositorio para garantizar la escala
 ```text
 /
 ├── docs/                   # Documentación técnica y de negocio (.md)
+│   ├── documentacion/      #Toda la documentacion en .md
 │   ├── contexto.md
 │   ├── requerimientos.md
 │   ├── roadmap.md
