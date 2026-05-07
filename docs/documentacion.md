@@ -1,34 +1,25 @@
-# Estándar de Documentación y Codificación - SED
+# Estándar de Documentación y Codificación - SED-360
 
-Este documento define las reglas que la IA debe seguir al generar código, explicaciones o nueva documentación para el Sistema de Evaluación Docente (SED).
+Este documento dicta cómo el equipo de desarrollo o IA debe escribir código y documentarlo.
 
 ## 1. Estándar de Código (Clean Code)
-* **Lenguaje:** Todo el código (variables, funciones, clases) debe escribirse en **Español**. Los comentarios de explicación deben ser en **Español**.
-* **Naming Convention:** * Variables/Funciones: `camelCase`
-    * Componentes (Astro/React): `PascalCase`
-    * Tablas SQL: `snake_case` (en plural).
-* **Tipado:** Es obligatorio el uso de **TypeScript** con tipado estricto (evitar el uso de `any`).
+* **Idioma:** Todo el código (variables, funciones), excepto por convenciones del framework, debe ser en **Español** para alinearse al lenguaje de dominio institucional.
+* **Naming Convention:**
+  * Variables/Funciones: `camelCase` (ej. `calcularPromedio`)
+  * Componentes (Astro/React): `PascalCase` (ej. `TarjetaEvaluacion`)
+  * Tablas SQL: `snake_case` (ej. `cargas_academicas`)
+* **Tipado:** Es obligatorio el uso estricto de **TypeScript**. Queda prohibido el uso de `any`.
 
-## 2. Estándar de Documentación Técnica (Markdown)
-Cada vez que se genere un nuevo módulo o funcionalidad, la IA debe incluir:
-1. **Descripción:** Qué hace el módulo.
-2. **Endpoint/Tabla:** Qué recursos de Supabase utiliza.
-3. **Snippet de Código:** El bloque de código funcional.
-4. **Validaciones:** Qué medidas de seguridad o reglas de negocio se están aplicando.
+## 2. Formato de Documentación Interna
+Cada módulo complejo debe llevar una cabecera en el archivo explicando:
+1. **Propósito:** Qué problema de negocio resuelve.
+2. **Dependencias:** Tablas de Supabase u otros servicios afectados.
+3. **Restricciones:** Reglas de negocio (Ej: "Asegurar que se ejecute la validación de moderación de texto").
 
-## 3. Manejo de Errores y Seguridad
-* **Logs:** No exponer errores internos de la base de datos al usuario final. Usar mensajes genéricos y loguear el error real en consola.
-* **Supabase RLS:** Todo script de creación de tabla debe venir acompañado de su política de seguridad (Row Level Security).
-* **Privacidad:** Recordar siempre el anonimato del `alumno_id` en las consultas de resultados.
+## 3. Manejo de Errores y Seguridad (RLS y Logs)
+* **Privacidad (RLS):** Toda tabla en Supabase debe llevar su política `CREATE POLICY`. El Frontend jamás debe confiar en ocultar botones; la base de datos es la última barrera.
+* **Mensajes de UI:** Nunca exponer errores técnicos al usuario (como un fallo SQL `UNIQUE CONSTRAINT`). Si el alumno intenta doble voto, el frontend captura el error del backend y muestra amablemente: *"Esta materia ya fue evaluada exitosamente."*
 
-## 4. Estilo de Componentes (Tailwind CSS)
-* Los componentes deben ser **Mobile-First**.
-* Usar la paleta de colores institucional (Sugerencia: Azules y Blancos para el TecNM).
-* Accesibilidad: Asegurar contraste de texto y etiquetas `aria-label` en los formularios Likert.
-
-## 5. Formato de Respuestas de la IA
-Cuando se le pida a la IA generar documentación de una nueva función, debe usar esta estructura:
-> ### [Nombre de la Función/Módulo]
-> **Propósito:** ...
-> **Archivos afectados:** `src/components/...` | `supabase/migrations/...`
-> **Lógica clave:** Explicación del algoritmo de ponderación o validación usado.
+## 4. Estilos y Componentes
+* Diseño **Mobile-First** obligatorio. La mayoría de los cuestionarios se responderán desde el smartphone de los alumnos.
+* Inclusión de etiquetas `aria-label` en las escalas de Likert para cumplir con estándares de accesibilidad en la educación.

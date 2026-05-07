@@ -1,27 +1,31 @@
-# Documento de Contexto: Sistema de Evaluación Docente 360°
+# Documento de Contexto: Sistema de Evaluación Docente 360° (SED-360)
 
 ## 1. Visión General
-Este sistema tiene como objetivo centralizar y automatizar la evaluación del desempeño docente. A diferencia de otros sistemas, aquí el flujo es estrictamente unidireccional: el **Docente** es el único sujeto evaluado por múltiples actores (Alumnos y Coordinadores).
+El Sistema de Evaluación del Desempeño Docente 360° (SED-360) es una metodología integral diseñada para medir la calidad educativa a través de la convergencia de múltiples perspectivas. A diferencia de los métodos tradicionales y unidireccionales, el SED-360 busca un equilibrio entre la percepción del cliente directo (el alumno) y la observación técnica institucional. 
 
-## 2. Definición de Actores y Roles
-* **Alumno:** Usuario con acceso a cuestionarios rápidos. Su evaluación se basa en la experiencia en el aula.
-* **Coordinador:** Perfil técnico/académico. Evalúa el cumplimiento del sílabo y la metodología pedagógica.
-* **Docente:** Sujeto pasivo de la evaluación. Solo tiene acceso a ver sus resultados agregados y comentarios anónimos.
-* **Administrador:** Gestiona periodos académicos, carga de datos (mapeo alumno-docente) y visualiza reportes globales.
+Los objetivos y puntos clave del sistema son:
+* **Integralidad:** Evaluar competencias académicas, administrativas y actitudinales.
+* **Confidencialidad:** Los resultados se manejan bajo estricto anonimato para proteger la integridad del proceso de evaluación.
+* **Mejora Continua:** El fin primordial es identificar brechas de capacitación pedagógica e institucional, no aplicar sanciones directas.
 
-## 3. Lógica de Negocio y Ponderación
-Para obtener una calificación final del docente, se aplica la siguiente fórmula:
-**Nota Final = (Promedio Likert Alumnos * 0.60) + (Evaluación Rúbrica Coordinador * 0.40)**
+## 2. Definición de Actores y Roles (Flujo 360°)
+El docente es el único sujeto evaluado en este flujo, y su calificación se compone de las siguientes perspectivas:
+* **Alumno (Evaluación Estudiantil):** Evalúa la experiencia en el aula, la claridad del docente y la metodología empírica.
+* **Evaluador Técnico (Observación de Clase):** Realiza una observación in situ sobre las técnicas didácticas aplicadas.
+* **Coordinador Académico (Evaluación por Coordinación):** Evalúa el cumplimiento del sílabo, puntualidad y dominio de la materia.
+* **Coordinación / Calidad (Evaluación de Planeación):** Revisa el aspecto administrativo y la entrega de planeaciones en tiempo y forma.
+* **Docente (Autoevaluación):** Reflexión del propio docente sobre su desempeño.
+* **Administrador:** Gestiona periodos académicos, carga de datos y visualiza el tablero de control institucional.
 
-### Escala Likert
-Se utiliza una escala de 1 a 5:
-1. Totalmente en desacuerdo
-2. En desacuerdo
-3. Neutral
-4. De acuerdo
-5. Totalmente de acuerdo
+## 3. Algoritmo de Ponderación 360°
+Para obtener el **Puntaje Global 360°**, se aplica la siguiente ponderación dictada por el manual institucional:
+* Evaluación Estudiantil: **35%**
+* Observación de Clase: **25%**
+* Evaluación por Coordinación: **20%**
+* Evaluación de Planeación: **15%**
+* Autoevaluación: **5%**
 
 ## 4. Reglas de Integridad (Business Rules)
-* **Voto Único:** Un alumno solo puede evaluar una vez a un docente específico por materia dentro de un mismo periodo académico.
-* **Anonimato Estricto:** La base de datos debe permitir auditar quién votó, pero la interfaz del docente/coordinador nunca debe mostrar la identidad del alumno ligada a un comentario o puntaje.
-* **Disponibilidad:** El sistema debe soportar picos de tráfico (concurrencia alta) durante la "Semana de Evaluación".
+* **Voto Único Estricto:** Un evaluador solo puede enviar sus resultados una vez por materia (carga académica). Protegido mediante Constraints SQL.
+* **Anonimato Absoluto:** La base de datos guarda el identificador para la auditoría y control de voto único, pero en la capa de interfaz los comentarios se muestran mezclados, sin fechas y sin ID de grupo.
+* **Moderación Institucional:** Textos de comentarios abiertos deben pasar por un filtro de lenguaje. Comentarios con lenguaje inapropiado son retenidos por el sistema.
