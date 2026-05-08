@@ -102,7 +102,13 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
 </Layout>
 
 <script>
-  import { obtenerClienteSuperbase } from '../lib/supabaseClient';
+  import { createClient } from '@supabase/supabase-js';
+
+  // Cliente de navegador (diferente al de servidor — necesita persistir sesión)
+  const clienteNavegador = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
 
   const boton = document.getElementById('btn-google') as HTMLButtonElement | null;
   const textoBoton = document.getElementById('btn-texto') as HTMLSpanElement | null;
@@ -115,11 +121,14 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
       boton.classList.add('opacity-60', 'cursor-not-allowed');
 
       try {
-        const cliente = obtenerClienteSuperbase();
-        await cliente.auth.signInWithOAuth({
+        await clienteNavegador.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: window.location.origin + '/api/auth/callback',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
           },
         });
       } catch (err) {

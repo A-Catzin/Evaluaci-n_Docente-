@@ -9,5 +9,5 @@
 ALTER TABLE periodos
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- Actualizar registros existentes que tengan created_at NULL
-UPDATE periodos SET created_at = NOW() WHERE created_at IS NULL;
+-- Nota: los registros existentes mantienen el valor por defecto NOW()
+-- automáticamente al agregar la columna con DEFAULT.

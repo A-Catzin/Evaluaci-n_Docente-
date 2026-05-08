@@ -20,8 +20,23 @@
               "icon": "lucide-file",
               "title": "03-cliente-supabase"
             }
+          },
+          {
+            "id": "c63bcfcf236c7233",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "06-schemas-validacion.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "06-schemas-validacion"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -94,7 +109,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "03-cliente-supabase.md",
+                "file": "06-schemas-validacion.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +119,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Enlaces entrantes de 03-cliente-supabase"
+              "title": "Enlaces entrantes de 06-schemas-validacion"
             }
           },
           {
@@ -113,12 +128,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "03-cliente-supabase.md",
+                "file": "06-schemas-validacion.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Enlaces salientes de 03-cliente-supabase"
+              "title": "Enlaces salientes de 06-schemas-validacion"
             }
           },
           {
@@ -156,13 +171,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "03-cliente-supabase.md",
+                "file": "06-schemas-validacion.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Esquema de 03-cliente-supabase"
+              "title": "Esquema de 06-schemas-validacion"
             }
           }
         ]
@@ -183,10 +198,12 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "103d246ce5eb8823",
+  "active": "c63bcfcf236c7233",
   "lastOpenFiles": [
-    "02-tipos-sistema.md",
+    "07-middleware-dominio.md",
     "01-esquema-core.md",
+    "03-cliente-supabase.md",
+    "02-tipos-sistema.md",
     "00-indice.md"
   ]
 }

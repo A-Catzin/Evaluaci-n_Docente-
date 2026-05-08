@@ -85,20 +85,13 @@ CREATE POLICY "Solo admin puede gestionar periodos"
         )
     );
 
--- Políticas RLS para resultados_agregados (lectura para admin, coordinador, calidad)
-ALTER TABLE resultados_agregados ENABLE ROW LEVEL SECURITY;
+-- ⚠️ Las vistas materializadas NO soportan RLS en PostgreSQL.
+-- La protección de acceso a resultados_agregados se realiza en:
+--   1. Middleware de Astro (src/middleware.ts): bloquea /admin/* para roles no autorizados
+--   2. Servicio agregacion.ts: consulta la MV solo desde endpoints protegidos
+--   3. Función refrescar_resultados(): SECURITY DEFINER, solo authenticated
 
-CREATE POLICY "Admin, coordinador y calidad pueden leer resultados"
-    ON resultados_agregados
-    FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM usuarios u
-            WHERE u.id = auth.uid() AND u.rol IN ('admin', 'coordinador', 'calidad')
-        )
-    );
-
--- 5. Función para refrescar la vista materializada (solo admin)
+-- 5. Función para refrescar la vista materializada (solo authenticated)
 CREATE OR REPLACE FUNCTION public.refrescar_resultados()
 RETURNS void
 LANGUAGE plpgsql
