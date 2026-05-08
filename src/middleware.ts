@@ -49,13 +49,6 @@ function esRutaPublica(pathname: string): boolean {
   return false;
 }
 
-/**
- * Verifica si una ruta es pública (no requiere autenticación)
- */
-function esRutaPublica(pathname: string): boolean {
-  return RUTAS_PUBLICAS.some((ruta) => pathname === ruta || pathname.startsWith(ruta + '/'));
-}
-
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies, redirect } = context;
 
