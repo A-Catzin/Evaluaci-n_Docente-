@@ -65,11 +65,31 @@ import Layout from '../layouts/Layout.astro';
 <script is:inline>
   // Detectar retorno de OAuth (hash con tokens de Supabase)
   (function () {
-    var hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      // Redirigir a /evaluador — el middleware validará la sesión
-      // Los tokens en el hash son procesados automáticamente por Supabase
+    var hash = window.location.hash.substring(1);
+    if (!hash || !hash.includes('access_token')) return;
+
+    // Parsear tokens del hash
+    var params = {};
+    hash.split('&').forEach(function (part) {
+      var pair = part.split('=');
+      params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+    });
+
+    var accessToken = params.access_token;
+    var refreshToken = params.refresh_token;
+    if (!accessToken || !refreshToken) return;
+
+    // Guardar tokens en cookies via nuestro endpoint
+    fetch('/api/auth/guardar-sesion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
+    }).then(function () {
+      // Limpiar hash de la URL y redirigir
       window.location.href = '/evaluador';
-    }
+    });
   })();
 </script>
