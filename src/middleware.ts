@@ -49,6 +49,14 @@ function esRutaPublica(pathname: string): boolean {
   return false;
 }
 
+/** Roles autorizados para acceder a rutas administrativas */
+const ROLES_ADMIN = ['admin', 'coordinador', 'calidad'] as const;
+
+/** Verifica si un rol tiene acceso a rutas administrativas */
+function esRolAutorizado(rol: string): boolean {
+  return ROLES_ADMIN.includes(rol as typeof ROLES_ADMIN[number]);
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies, redirect } = context;
 
