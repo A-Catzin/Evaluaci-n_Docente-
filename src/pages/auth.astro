@@ -102,10 +102,9 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
 </Layout>
 
 <script>
-  import { createBrowserClient } from '@supabase/ssr';
+  import { createClient } from '@supabase/supabase-js';
 
-  // Cliente de navegador con soporte SSR — almacena code_verifier en cookies
-  const clienteNavegador = createBrowserClient(
+  const clienteNavegador = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY
   );
