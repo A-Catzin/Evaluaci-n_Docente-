@@ -1,84 +1,132 @@
 ---
 /**
- * Callback OAuth — Página de intercambio de código (cliente)
+ * Callback OAuth — Intercambio PKCE directo con Supabase API
  *
- * Muestra el estado del proceso de autenticación en pantalla
- * para facilitar el diagnóstico en desarrollo.
+ * Usa fetch directo a la API de Supabase (sin depender de @supabase/supabase-js
+ * en el bundle del cliente). El code_verifier se lee de sessionStorage.
  */
 import Layout from '../../layouts/Layout.astro';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string;
+const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
 ---
 
-<Layout titulo="SED-360 — Autenticando..." modoEnfoque={true}>
-  <div class="flex flex-col items-center justify-center min-h-[80vh] gap-4 text-center px-4">
+<Layout titulo="SED-360 — Iniciando sesión..." modoEnfoque={true}>
+  <div class="flex flex-col items-center justify-center min-h-[80vh] gap-4 text-center">
     <div id="spinner" class="w-12 h-12 rounded-full border-4 border-accion border-t-transparent animate-spin"></div>
-    <p id="estado" class="text-slate-500 text-sm">Conectando con Google...</p>
-    <div id="debug" class="mt-4 max-w-md w-full text-left"></div>
+    <p id="estado" class="text-slate-500 text-sm">Completando inicio de sesión...</p>
+    <div id="debug" class="mt-4 max-w-md w-full text-left text-xs"></div>
   </div>
 </Layout>
 
-<script>
-  import { createClient } from '@supabase/supabase-js';
+<script is:inline define:vars={{ supabaseUrl, anonKey }}>
+  (async function () {
+    var estadoEl = document.getElementById('estado');
+    var debugEl = document.getElementById('debug');
+    var spinnerEl = document.getElementById('spinner');
 
-  const cliente = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-  );
+    function log(texto, error) {
+      var div = document.createElement('div');
+      div.className = 'py-1 px-2 rounded mb-1 ' + (error ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-600');
+      div.textContent = texto;
+      if (debugEl) debugEl.appendChild(div);
+    }
 
-  async function intercambiarCodigo() {
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    const errorParam = url.searchParams.get('error');
-    const errorDesc = url.searchParams.get('error_description');
+    function setEstado(texto, error) {
+      if (estadoEl) {
+        estadoEl.textContent = texto;
+        estadoEl.className = 'text-sm ' + (error ? 'text-red-600 font-medium' : 'text-slate-500');
+      }
+      if (error && spinnerEl) spinnerEl.classList.add('hidden');
+    }
 
-    mostrarPaso('URL: ' + window.location.href);
-    mostrarPaso('Code presente: ' + (code ? 'SI (' + code.substring(0, 12) + '...)' : 'NO'));
-    mostrarPaso('Error param: ' + (errorParam || 'ninguno'));
+    var url = new URL(window.location.href);
+    var code = url.searchParams.get('code');
+    var errorParam = url.searchParams.get('error');
+
+    log('URL: ' + window.location.href);
+    log('Code: ' + (code ? 'SI' : 'NO'));
+    log('Error: ' + (errorParam || 'ninguno'));
 
     if (errorParam) {
-      setEstado('Error de Google/Supabase: ' + errorParam, true);
-      mostrarPaso('Error description: ' + (errorDesc || 'sin descripción'), true);
-      mostrarPaso('Redirigiendo a /auth?error=oauth en 5s...');
-      setTimeout(() => { window.location.href = '/auth?error=oauth'; }, 5000);
+      setEstado('Error de Google: ' + errorParam, true);
       return;
     }
 
     if (!code) {
       setEstado('No se recibió código de autorización', true);
-      mostrarPaso('Posible causa: Redirect URL no configurada en Supabase', true);
+      log('Posible causa: Site URL no configurada correctamente en Supabase', true);
       return;
     }
 
+    // Leer code_verifier de sessionStorage (guardado por signInWithOAuth)
+    var codeVerifier = sessionStorage.getItem('supabase.auth.token.code_verifier');
+    
+    // También puede estar en localStorage con prefijo
+    if (!codeVerifier) {
+      var keys = Object.keys(sessionStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf('code_verifier') !== -1) {
+          codeVerifier = sessionStorage.getItem(keys[i]);
+          log('Encontrado en: ' + keys[i]);
+          break;
+        }
+      }
+    }
+
+    log('Code verifier: ' + (codeVerifier ? 'SI (longitud ' + codeVerifier.length + ')' : 'NO'));
+
+    if (!codeVerifier) {
+      setEstado('No se encontró code_verifier en sessionStorage', true);
+      log('Esto impide completar el intercambio PKCE', true);
+      log('Intentando intercambio sin PKCE (puede fallar)...');
+    }
+
     setEstado('Intercambiando código por sesión...');
-    mostrarPaso('Llamando a exchangeCodeForSession...');
 
     try {
-      const { data, error } = await cliente.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        setEstado('Error al intercambiar código', true);
-        mostrarPaso('Error: ' + error.message, true);
-        mostrarPaso('Status: ' + (error.status || 'N/A'), true);
-        if (error.message.includes('code verifier')) {
-          mostrarPaso('⚠️ El code_verifier no coincide. ¿Usaste el mismo navegador que inició el flujo?', true);
-        }
-        return;
+      var body = { auth_code: code };
+      if (codeVerifier) {
+        body.code_verifier = codeVerifier;
       }
 
-      if (!data.session) {
-        setEstado('No se recibió sesión', true);
-        mostrarPaso('El intercambio fue exitoso pero no hay datos de sesión', true);
-        return;
-      }
+      var res = await fetch(supabaseUrl + '/auth/v1/token?grant_type=pkce', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': anonKey,
+        },
+        body: JSON.stringify(body),
+      });
 
-      setEstado('¡Sesión establecida! Redirigiendo...', false);
-      mostrarPaso('Usuario: ' + (data.session.user?.email || 'desconocido'));
-      mostrarPaso('Redirigiendo a /evaluador...');
-      setTimeout(() => { window.location.href = '/evaluador'; }, 1000);
+      var data = await res.json();
+      log('Status: ' + res.status);
+
+      if (res.ok && data.access_token) {
+        setEstado('¡Sesión establecida!');
+        log('Usuario: ' + (data.user?.email || 'desconocido'));
+        log('Redirigiendo...');
+
+        // Guardar tokens en cookies vía nuestro endpoint
+        await fetch('/api/auth/guardar-sesion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+          }),
+        });
+
+        setTimeout(function () {
+          window.location.href = '/evaluador';
+        }, 500);
+      } else {
+        setEstado('Error al intercambiar: ' + (data.error_description || data.error || res.status), true);
+        log(JSON.stringify(data), true);
+      }
     } catch (err) {
-      setEstado('Error inesperado', true);
-      mostrarPaso('Excepción: ' + (err instanceof Error ? err.message : String(err)), true);
+      setEstado('Error de conexión', true);
+      log(err.message || String(err), true);
     }
-  }
-
-  intercambiarCodigo();
+  })();
 </script>

@@ -27,6 +27,7 @@ const DOMINIO_PERMITIDO = '@tecplayacar.edu.mx';
 /** Rutas públicas que no requieren autenticación */
 const RUTAS_PUBLICAS = [
   '/api/auth/signout',
+  '/api/auth/guardar-sesion',
   '/auth',
   '/',               // Landing page
   '/favicon.ico',

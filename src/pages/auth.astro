@@ -124,10 +124,6 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
           provider: 'google',
           options: {
             redirectTo: window.location.origin + '/auth/callback',
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            },
           },
         });
       } catch (err) {

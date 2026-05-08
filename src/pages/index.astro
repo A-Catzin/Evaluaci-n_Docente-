@@ -61,3 +61,15 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </div>
 </Layout>
+
+<script is:inline>
+  // Detectar retorno de OAuth (hash con tokens de Supabase)
+  (function () {
+    var hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      // Redirigir a /evaluador — el middleware validará la sesión
+      // Los tokens en el hash son procesados automáticamente por Supabase
+      window.location.href = '/evaluador';
+    }
+  })();
+</script>
