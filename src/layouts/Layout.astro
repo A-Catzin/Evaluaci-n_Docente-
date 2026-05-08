@@ -1,25 +1,12 @@
 ---
 /**
  * Layout.astro — Plantilla base de la Plataforma SED-360
- *
- * Propósito: Proveer la estructura visual común para todas las páginas
- * del Sistema de Evaluación Docente 360°. Implementa el concepto
- * "Modern Institutional" con fondos dinámicos, formas orgánicas y
- * tarjetas con elevación.
- *
- * Dependencias: Tailwind CSS 3 con paleta institucional.
- *
- * Características:
- * - Fondo con gradientes y formas geométricas (no blanco sólido)
- * - Modo Enfoque para formularios (oculta navbar/footer)
- * - Diseño Mobile-First optimizado para cuestionarios táctiles
- * - Preparado para autenticación Supabase
  */
+import { obtenerClienteSuperbase } from '../lib/supabaseClient';
 
 export interface Props {
   titulo?: string;
   descripcion?: string;
-  /** Oculta la barra de navegación para modo enfoque (ej: formulario Likert) */
   modoEnfoque?: boolean;
 }
 
@@ -28,6 +15,37 @@ const {
   descripcion = 'Plataforma integral de evaluación docente 360° del Tecnológico Universitario Playacar',
   modoEnfoque = false,
 } = Astro.props;
+
+// Detectar sesión para mostrar navegación contextual
+let rolUsuario: string | null = null;
+let haySesion = false;
+
+const tokenAcceso = Astro.cookies.get('sb-access-token')?.value;
+const tokenRefresco = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (tokenAcceso && tokenRefresco) {
+  try {
+    const cliente = obtenerClienteSuperbase();
+    const { data } = await cliente.auth.setSession({
+      access_token: tokenAcceso,
+      refresh_token: tokenRefresco,
+    });
+
+    if (data.user) {
+      haySesion = true;
+      const { data: usuario } = await cliente
+        .from('usuarios')
+        .select('rol')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      rolUsuario = usuario?.rol ?? null;
+    }
+  } catch {
+    // Sesión inválida o error — no mostrar navegación
+  }
+}
+
+const esAdmin = rolUsuario === 'admin' || rolUsuario === 'coordinador' || rolUsuario === 'calidad';
 ---
 
 <!doctype html>
@@ -83,8 +101,27 @@ const {
                 </span>
               </a>
 
-              <!-- Espacio para avatar / botón de salir (futuro) -->
-              <div class="flex items-center gap-4">
+              <!-- Navegación según rol -->
+              <div class="flex items-center gap-2 sm:gap-4">
+                {
+                  haySesion && (
+                    <>
+                      <a href="/evaluador" class="text-sm text-slate-600 hover:text-institucional transition-colors font-medium">
+                        Mis Evaluaciones
+                      </a>
+                      {
+                        esAdmin && (
+                          <a href="/admin/dashboard" class="text-sm text-accion hover:text-accion/80 transition-colors font-medium">
+                            Admin
+                          </a>
+                        )
+                      }
+                      <a href="/api/auth/signout" class="text-xs text-slate-400 hover:text-red-500 transition-colors ml-2">
+                        Salir
+                      </a>
+                    </>
+                  )
+                }
                 <slot name="acciones-nav" />
               </div>
             </nav>
