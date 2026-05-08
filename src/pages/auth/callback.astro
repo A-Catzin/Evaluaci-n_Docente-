@@ -2,29 +2,41 @@
 /**
  * Callback OAuth — Página de intercambio de código (cliente)
  *
- * Propósito: Recibir el código de autorización de Supabase después
- * del flujo OAuth de Google y completar el intercambio PKCE en el
- * navegador (donde está almacenado el code_verifier).
- *
- * El intercambio NO puede hacerse en el servidor porque el
- * code_verifier solo existe en sessionStorage del navegador
- * que inició el flujo.
- *
- * Ruta pública (ver middleware.ts).
+ * Muestra el estado del proceso de autenticación en pantalla
+ * para facilitar el diagnóstico en desarrollo.
  */
 import Layout from '../../layouts/Layout.astro';
 ---
 
-<Layout titulo="SED-360 — Iniciando sesión..." modoEnfoque={true}>
-  <div class="flex flex-col items-center justify-center min-h-[80vh] gap-4 text-center">
-    <div class="w-12 h-12 rounded-full border-4 border-accion border-t-transparent animate-spin"></div>
-    <p class="text-slate-500 text-sm">Iniciando sesión...</p>
-    <p id="error-msg" class="text-red-600 text-sm hidden"></p>
+<Layout titulo="SED-360 — Autenticando..." modoEnfoque={true}>
+  <div class="flex flex-col items-center justify-center min-h-[80vh] gap-4 text-center px-4">
+    <div id="spinner" class="w-12 h-12 rounded-full border-4 border-accion border-t-transparent animate-spin"></div>
+    <p id="estado" class="text-slate-500 text-sm">Conectando con Google...</p>
+    <div id="debug" class="mt-4 max-w-md w-full text-left"></div>
   </div>
 </Layout>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
+
+  const estadoEl = document.getElementById('estado');
+  const debugEl = document.getElementById('debug');
+  const spinnerEl = document.getElementById('spinner');
+
+  function mostrarPaso(texto, esError = false) {
+    const div = document.createElement('div');
+    div.className = 'text-xs py-1 px-2 rounded mb-1 ' + (esError ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-600');
+    div.textContent = texto;
+    debugEl?.appendChild(div);
+  }
+
+  function setEstado(texto, esError = false) {
+    if (estadoEl) {
+      estadoEl.textContent = texto;
+      estadoEl.className = 'text-sm ' + (esError ? 'text-red-600 font-medium' : 'text-slate-500');
+    }
+    if (esError && spinnerEl) spinnerEl.classList.add('hidden');
+  }
 
   const cliente = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
@@ -42,31 +54,55 @@ import Layout from '../../layouts/Layout.astro';
     const url = new URL(window.location.href);
     const code = url.searchParams.get('code');
     const errorParam = url.searchParams.get('error');
+    const errorDesc = url.searchParams.get('error_description');
+
+    mostrarPaso('URL: ' + window.location.href);
+    mostrarPaso('Code presente: ' + (code ? 'SI (' + code.substring(0, 12) + '...)' : 'NO'));
+    mostrarPaso('Error param: ' + (errorParam || 'ninguno'));
 
     if (errorParam) {
-      window.location.href = '/auth?error=oauth';
+      setEstado('Error de Google/Supabase: ' + errorParam, true);
+      mostrarPaso('Error description: ' + (errorDesc || 'sin descripción'), true);
+      mostrarPaso('Redirigiendo a /auth?error=oauth en 5s...');
+      setTimeout(() => { window.location.href = '/auth?error=oauth'; }, 5000);
       return;
     }
 
     if (!code) {
-      window.location.href = '/auth?error=oauth';
+      setEstado('No se recibió código de autorización', true);
+      mostrarPaso('Posible causa: Redirect URL no configurada en Supabase', true);
       return;
     }
+
+    setEstado('Intercambiando código por sesión...');
+    mostrarPaso('Llamando a exchangeCodeForSession...');
 
     try {
       const { data, error } = await cliente.auth.exchangeCodeForSession(code);
 
-      if (error || !data.session) {
-        console.error('[SED-360 Callback] Error al intercambiar código:', error?.message);
-        window.location.href = '/auth?error=oauth';
+      if (error) {
+        setEstado('Error al intercambiar código', true);
+        mostrarPaso('Error: ' + error.message, true);
+        mostrarPaso('Status: ' + (error.status || 'N/A'), true);
+        if (error.message.includes('code verifier')) {
+          mostrarPaso('⚠️ El code_verifier no coincide. ¿Usaste el mismo navegador que inició el flujo?', true);
+        }
         return;
       }
 
-      // Sesión establecida — redirigir al dashboard
-      window.location.href = '/evaluador';
+      if (!data.session) {
+        setEstado('No se recibió sesión', true);
+        mostrarPaso('El intercambio fue exitoso pero no hay datos de sesión', true);
+        return;
+      }
+
+      setEstado('¡Sesión establecida! Redirigiendo...', false);
+      mostrarPaso('Usuario: ' + (data.session.user?.email || 'desconocido'));
+      mostrarPaso('Redirigiendo a /evaluador...');
+      setTimeout(() => { window.location.href = '/evaluador'; }, 1000);
     } catch (err) {
-      console.error('[SED-360 Callback] Error inesperado:', err);
-      window.location.href = '/auth?error=oauth';
+      setEstado('Error inesperado', true);
+      mostrarPaso('Excepción: ' + (err instanceof Error ? err.message : String(err)), true);
     }
   }
 
