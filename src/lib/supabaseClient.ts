@@ -1,4 +1,19 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createRequire } from 'node:module';
+
+/**
+ * Polyfill WebSocket para Node.js < 22 (no tiene WebSocket nativo).
+ * Solo se ejecuta en el servidor — el cliente navegador usa su propio WebSocket.
+ */
+if (typeof globalThis.WebSocket === 'undefined') {
+  try {
+    const requerir = createRequire(import.meta.url);
+    const ws = requerir('ws');
+    (globalThis as Record<string, unknown>).WebSocket = ws;
+  } catch {
+    // ws no instalado — realtime no disponible, auth/queries sí funcionan
+  }
+}
 
 /**
  * Cliente de Supabase — Carga perezosa (Lazy Initialization)
