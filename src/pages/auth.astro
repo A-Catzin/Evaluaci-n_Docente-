@@ -104,10 +104,18 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
 <script>
   import { createClient } from '@supabase/supabase-js';
 
-  // Cliente de navegador (diferente al de servidor — necesita persistir sesión)
+  // Cliente de navegador con PKCE (código en query string, no en hash)
   const clienteNavegador = createClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    }
   );
 
   const boton = document.getElementById('btn-google') as HTMLButtonElement | null;
