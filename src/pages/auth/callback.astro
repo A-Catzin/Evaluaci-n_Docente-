@@ -1,0 +1,74 @@
+---
+/**
+ * Callback OAuth — Página de intercambio de código (cliente)
+ *
+ * Propósito: Recibir el código de autorización de Supabase después
+ * del flujo OAuth de Google y completar el intercambio PKCE en el
+ * navegador (donde está almacenado el code_verifier).
+ *
+ * El intercambio NO puede hacerse en el servidor porque el
+ * code_verifier solo existe en sessionStorage del navegador
+ * que inició el flujo.
+ *
+ * Ruta pública (ver middleware.ts).
+ */
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout titulo="SED-360 — Iniciando sesión..." modoEnfoque={true}>
+  <div class="flex flex-col items-center justify-center min-h-[80vh] gap-4 text-center">
+    <div class="w-12 h-12 rounded-full border-4 border-accion border-t-transparent animate-spin"></div>
+    <p class="text-slate-500 text-sm">Iniciando sesión...</p>
+    <p id="error-msg" class="text-red-600 text-sm hidden"></p>
+  </div>
+</Layout>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const cliente = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        persistSession: true,
+      },
+    }
+  );
+
+  async function intercambiarCodigo() {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const errorParam = url.searchParams.get('error');
+
+    if (errorParam) {
+      window.location.href = '/auth?error=oauth';
+      return;
+    }
+
+    if (!code) {
+      window.location.href = '/auth?error=oauth';
+      return;
+    }
+
+    try {
+      const { data, error } = await cliente.auth.exchangeCodeForSession(code);
+
+      if (error || !data.session) {
+        console.error('[SED-360 Callback] Error al intercambiar código:', error?.message);
+        window.location.href = '/auth?error=oauth';
+        return;
+      }
+
+      // Sesión establecida — redirigir al dashboard
+      window.location.href = '/evaluador';
+    } catch (err) {
+      console.error('[SED-360 Callback] Error inesperado:', err);
+      window.location.href = '/auth?error=oauth';
+    }
+  }
+
+  intercambiarCodigo();
+</script>
