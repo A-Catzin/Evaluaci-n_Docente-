@@ -34,16 +34,19 @@ const RUTAS_PUBLICAS = [
   '/favicon.svg',
 ];
 
-/** Roles autorizados para acceder a rutas administrativas */
-export const ROLES_ADMIN = ['admin', 'coordinador', 'calidad'] as const;
-export type RolAdmin = (typeof ROLES_ADMIN)[number];
-
 /**
- * Verifica si un rol tiene acceso a rutas administrativas.
- * Helper exportable para usar en páginas y endpoints.
+ * Verifica si una ruta es pública.
+ * /auth/callback y sus sub-rutas también son públicas.
  */
-export function esRolAutorizado(rol: string | null | undefined): rol is RolAdmin {
-  return ROLES_ADMIN.includes(rol as RolAdmin);
+function esRutaPublica(pathname: string): boolean {
+  if (RUTAS_PUBLICAS.some((ruta) => pathname === ruta || pathname.startsWith(ruta + '/'))) {
+    return true;
+  }
+  // El callback de auth con hash también es público
+  if (pathname.startsWith('/auth/callback')) {
+    return true;
+  }
+  return false;
 }
 
 /**

@@ -1,14 +1,12 @@
 ---
 /**
- * Callback OAuth — Intercambio PKCE directo con Supabase API
+ * Callback OAuth — Extrae tokens del hash y guarda sesión
  *
- * Usa fetch directo a la API de Supabase (sin depender de @supabase/supabase-js
- * en el bundle del cliente). El code_verifier se lee de sessionStorage.
+ * Supabase usa flujo implícito: los tokens vienen en el hash de la URL.
+ * Los extraemos, los enviamos a nuestro endpoint para guardar cookies,
+ * y redirigimos al dashboard.
  */
 import Layout from '../../layouts/Layout.astro';
-
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL as string;
-const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
 ---
 
 <Layout titulo="SED-360 — Iniciando sesión..." modoEnfoque={true}>
@@ -19,8 +17,8 @@ const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
   </div>
 </Layout>
 
-<script is:inline define:vars={{ supabaseUrl, anonKey }}>
-  (async function () {
+<script is:inline>
+  (function () {
     var estadoEl = document.getElementById('estado');
     var debugEl = document.getElementById('debug');
     var spinnerEl = document.getElementById('spinner');
@@ -40,93 +38,69 @@ const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string;
       if (error && spinnerEl) spinnerEl.classList.add('hidden');
     }
 
-    var url = new URL(window.location.href);
-    var code = url.searchParams.get('code');
-    var errorParam = url.searchParams.get('error');
+    var hash = window.location.hash.substring(1); // Quitar el #
+    log('Hash presente: ' + (hash ? 'SI (' + hash.length + ' chars)' : 'NO'));
 
-    log('URL: ' + window.location.href);
-    log('Code: ' + (code ? 'SI' : 'NO'));
-    log('Error: ' + (errorParam || 'ninguno'));
+    if (!hash) {
+      // Intentar con query string (flujo PKCE)
+      var url = new URL(window.location.href);
+      var code = url.searchParams.get('code');
+      var errorParam = url.searchParams.get('error');
 
-    if (errorParam) {
-      setEstado('Error de Google: ' + errorParam, true);
+      if (errorParam) {
+        setEstado('Error: ' + errorParam, true);
+        return;
+      }
+      if (code) {
+        setEstado('Código PKCE detectado pero no implementado en este flujo', true);
+        return;
+      }
+      setEstado('No se recibieron tokens ni código', true);
       return;
     }
 
-    if (!code) {
-      setEstado('No se recibió código de autorización', true);
-      log('Posible causa: Site URL no configurada correctamente en Supabase', true);
+    // Parsear parámetros del hash
+    var params = {};
+    hash.split('&').forEach(function (part) {
+      var pair = part.split('=');
+      params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+    });
+
+    var accessToken = params.access_token;
+    var refreshToken = params.refresh_token;
+
+    log('access_token: ' + (accessToken ? 'SI (' + accessToken.substring(0, 20) + '...)' : 'NO'));
+    log('refresh_token: ' + (refreshToken ? 'SI' : 'NO'));
+
+    if (!accessToken || !refreshToken) {
+      setEstado('Tokens no encontrados en el hash', true);
       return;
     }
 
-    // Leer code_verifier de sessionStorage (guardado por signInWithOAuth)
-    var codeVerifier = sessionStorage.getItem('supabase.auth.token.code_verifier');
-    
-    // También puede estar en localStorage con prefijo
-    if (!codeVerifier) {
-      var keys = Object.keys(sessionStorage);
-      for (var i = 0; i < keys.length; i++) {
-        if (keys[i].indexOf('code_verifier') !== -1) {
-          codeVerifier = sessionStorage.getItem(keys[i]);
-          log('Encontrado en: ' + keys[i]);
-          break;
+    setEstado('Guardando sesión...');
+
+    fetch('/api/auth/guardar-sesion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
+    })
+      .then(function (res) {
+        log('Guardar sesión: ' + res.status);
+        if (res.ok) {
+          setEstado('¡Sesión establecida! Redirigiendo...');
+          setTimeout(function () {
+            window.location.href = '/evaluador';
+          }, 500);
+        } else {
+          setEstado('Error al guardar sesión (status ' + res.status + ')', true);
         }
-      }
-    }
-
-    log('Code verifier: ' + (codeVerifier ? 'SI (longitud ' + codeVerifier.length + ')' : 'NO'));
-
-    if (!codeVerifier) {
-      setEstado('No se encontró code_verifier en sessionStorage', true);
-      log('Esto impide completar el intercambio PKCE', true);
-      log('Intentando intercambio sin PKCE (puede fallar)...');
-    }
-
-    setEstado('Intercambiando código por sesión...');
-
-    try {
-      var body = { auth_code: code };
-      if (codeVerifier) {
-        body.code_verifier = codeVerifier;
-      }
-
-      var res = await fetch(supabaseUrl + '/auth/v1/token?grant_type=pkce', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': anonKey,
-        },
-        body: JSON.stringify(body),
+      })
+      .catch(function (err) {
+        setEstado('Error de conexión al guardar sesión', true);
+        log(err.message, true);
       });
-
-      var data = await res.json();
-      log('Status: ' + res.status);
-
-      if (res.ok && data.access_token) {
-        setEstado('¡Sesión establecida!');
-        log('Usuario: ' + (data.user?.email || 'desconocido'));
-        log('Redirigiendo...');
-
-        // Guardar tokens en cookies vía nuestro endpoint
-        await fetch('/api/auth/guardar-sesion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-          }),
-        });
-
-        setTimeout(function () {
-          window.location.href = '/evaluador';
-        }, 500);
-      } else {
-        setEstado('Error al intercambiar: ' + (data.error_description || data.error || res.status), true);
-        log(JSON.stringify(data), true);
-      }
-    } catch (err) {
-      setEstado('Error de conexión', true);
-      log(err.message || String(err), true);
-    }
   })();
 </script>
