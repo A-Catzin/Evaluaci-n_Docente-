@@ -17,37 +17,11 @@ import Layout from '../../layouts/Layout.astro';
 </Layout>
 
 <script>
-  import { createClient } from '@supabase/supabase-js';
+  import { createBrowserClient } from '@supabase/ssr';
 
-  const estadoEl = document.getElementById('estado');
-  const debugEl = document.getElementById('debug');
-  const spinnerEl = document.getElementById('spinner');
-
-  function mostrarPaso(texto, esError = false) {
-    const div = document.createElement('div');
-    div.className = 'text-xs py-1 px-2 rounded mb-1 ' + (esError ? 'bg-red-50 text-red-700' : 'bg-slate-50 text-slate-600');
-    div.textContent = texto;
-    debugEl?.appendChild(div);
-  }
-
-  function setEstado(texto, esError = false) {
-    if (estadoEl) {
-      estadoEl.textContent = texto;
-      estadoEl.className = 'text-sm ' + (esError ? 'text-red-600 font-medium' : 'text-slate-500');
-    }
-    if (esError && spinnerEl) spinnerEl.classList.add('hidden');
-  }
-
-  const cliente = createClient(
+  const cliente = createBrowserClient(
     import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    {
-      auth: {
-        flowType: 'pkce',
-        autoRefreshToken: true,
-        persistSession: true,
-      },
-    }
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
   );
 
   async function intercambiarCodigo() {
