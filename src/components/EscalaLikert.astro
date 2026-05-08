@@ -14,9 +14,7 @@
  * - Event delegation en el contenedor
  *
  * Nota técnica:
- * Astro procesa los tags <script> de componentes .astro como módulos ES
- * que se incluyen automáticamente en el bundle de la página. No requiere
- * directiva client:load — el script se ejecuta cuando el DOM está listo.
+ * El script se ejecuta con event delegation cuando el DOM está listo.
  *
  * @props {string} pregunta - Texto de la pregunta a mostrar
  * @props {string} nombre - Identificador único para el evento
