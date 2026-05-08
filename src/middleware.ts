@@ -95,23 +95,36 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // ─── Autorización por rol para rutas administrativas ─────────
     if (url.pathname.startsWith('/admin')) {
+      console.log('[SED-360 Middleware] Verificando rol para:', data.user.email);
+
       const { data: usuario, error: errorRol } = await cliente
         .from('usuarios')
         .select('rol')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (errorRol || !usuario) {
-        console.error('[SED-360 Middleware] Error al obtener rol:', errorRol?.message);
-        return redirect('/?error=no-autorizado');
+      console.log('[SED-360 Middleware] Resultado consulta rol:', { usuario, error: errorRol?.message });
+
+      if (errorRol) {
+        console.error('[SED-360 Middleware] Error al obtener rol:', errorRol);
+        return redirect('/?error=rol-no-encontrado');
       }
+
+      if (!usuario) {
+        console.warn('[SED-360 Middleware] Usuario no encontrado en tabla usuarios:', data.user.id);
+        return redirect('/?error=sin-perfil');
+      }
+
+      console.log('[SED-360 Middleware] Rol encontrado:', usuario.rol);
 
       if (!esRolAutorizado(usuario.rol)) {
         console.warn(
-          `[SED-360 Middleware] Acceso denegado a /admin: ${data.user.email} con rol ${usuario.rol}`
+          `[SED-360 Middleware] Acceso denegado: ${data.user.email} con rol ${usuario.rol}`
         );
         return redirect('/?error=no-autorizado');
       }
+
+      console.log('[SED-360 Middleware] Acceso autorizado a /admin');
     }
 
     // Email válido y autorización aprobada: continuar con la petición
