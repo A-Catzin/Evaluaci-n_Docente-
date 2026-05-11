@@ -226,7 +226,14 @@ CREATE TABLE evaluacion_planeacion (
     ) STORED,
     categoria               VARCHAR(20) CHECK (categoria IN ('excelente','bueno','regular','insuficiente')),
     comentarios             TEXT,
-    score_normalizado       DECIMAL(5,2) GENERATED ALWAYS AS ((puntos_totales / 22.0) * 100) STORED,
+    score_normalizado       DECIMAL(5,2) GENERATED ALWAYS AS (
+        (COALESCE(criterio_elementos_curriculares,0) + COALESCE(criterio_fase_inicio,0) +
+         COALESCE(criterio_fase_desarrollo,0) + COALESCE(criterio_fase_cierre,0) +
+         COALESCE(criterio_caracteristicas_act,0) + COALESCE(criterio_estrategias_didacticas,0) +
+         COALESCE(criterio_recursos_didacticos,0) + COALESCE(criterio_organizacion_grupo,0) +
+         COALESCE(criterio_estrategias_evaluacion,0) + COALESCE(criterio_productos,0) +
+         COALESCE(criterio_bibliografia,0)) / 22.0 * 100
+    ) STORED,
     UNIQUE(docente_id, cuatrimestre_id, asignatura_id, evaluador_id)
 );
 
