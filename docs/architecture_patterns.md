@@ -1,26 +1,61 @@
-# Patrones de Arquitectura y Flujo de Datos - SED-360
+# Patrones de Arquitectura — SED-360 v2
 
-Este documento establece la estructura lógica para separar responsabilidades y evitar cuellos de botella en la base de datos.
+## 1. Service Layer
 
-## 1. Patrón de Escalabilidad: "Separación de Escritura y Lectura"
-Debido a que la evaluación estudiantil suele ocurrir de forma masiva en las últimas semanas del periodo:
-* **Flujo de Captura (High-Write):** La aplicación cliente (Astro) se limita a hacer `INSERT` sobre la tabla `evaluaciones`. No hace cálculos pesados en el momento.
-* **Flujo de Reporte (Low-Read):** Se utilizará una tabla secundaria consolidada (`resultados_agregados`). Esta se alimentará mediante un *Cron Job* nocturno o una *Materialized View* en PostgreSQL. Esto asegura que el Dashboard del Admin o Coordinador cargue en milisegundos sin calcular miles de filas en vivo.
+```
+src/services/
+├── catalogos.ts      # cuatrimestres, licenciaturas, asignaturas
+├── docentes.ts       # docentes, grupos
+├── estudiantes.ts    # estudiantes, inscripciones
+├── instrumentos.ts   # EE, CA, PD, OC, AE
+└── calificaciones.ts # calificacion_final_docente
+```
 
-## 2. Metodología Likert y Normalización a Base 100
-Para poder sumar las respuestas de escala Likert (1 a 5) y combinarlas con porcentajes de rúbricas, aplicamos la fórmula de normalización matemática:
+Cada servicio encapsula las consultas a Supabase. Las páginas Astro NUNCA llaman a `supabase.from()` directamente.
 
-**Fórmula Institucional:** `Resultado = ((Valor_obtenido - 1) / (Valor_max - 1)) * 100`
+## 2. Layouts por Rol
 
-**Implementación en Service Layer (TypeScript):**
-```typescript
-/**
- * Normaliza un valor de escala Likert (ej. 1-5) a un porcentaje (0-100).
- * Ej: Un voto de 4 (De acuerdo) en escala de 5 -> ((4-1)/(5-1))*100 = 75%
- */
-export const normalizarLikert = (valorObtenido: number, valorMaximo: number = 5): number => {
-    if (valorObtenido < 1 || valorObtenido > valorMaximo) {
-        throw new Error("Valor fuera del rango Likert permitido");
-    }
-    return ((valorObtenido - 1) / (valorMaximo - 1)) * 100;
-};
+```
+src/layouts/
+├── BaseLayout.astro        # Shell HTML común (meta, fondos, CSS global)
+├── LayoutAdmin.astro       # Sidebar fijo para superadmin
+├── LayoutCoordinador.astro # Top nav para coordinador
+├── LayoutDocente.astro     # Top nav para docente
+└── LayoutEstudiante.astro  # Full-screen sin distracciones
+```
+
+## 3. Autorización (Middleware)
+
+El middleware `src/middleware.ts` valida en cada request:
+1. Cookies de sesión (sb-access-token, sb-refresh-token)
+2. Dominio `@tecplayacar.edu.mx`
+3. Rol autorizado para la ruta (mapa `ROLES_POR_RUTA`)
+
+```
+/admin/*        → superadmin
+/coordinador/*  → coordinador, superadmin
+/docente/*      → docente, superadmin, coordinador
+/estudiante/*   → estudiante, superadmin
+```
+
+## 4. Flujo de Autenticación
+
+```
+/auth → Google OAuth → Supabase → /#access_token=...&refresh_token=...
+                                         ↓
+                              index.astro (script is:inline)
+                                         ↓
+                           POST /api/auth/guardar-sesion → cookies
+                                         ↓
+                              GET /api/auth/rol → redirigir según rol
+```
+
+## 5. Anonimato de Encuesta Estudiantil
+
+Dos tablas separadas:
+- `encuesta_estudiantil_respuestas` — SIN `estudiante_id`. Solo guarda docente_id, grupo_id, respuestas.
+- `encuesta_control_envio` — CON `estudiante_id`. Solo registra QUE respondió (UNIQUE).
+
+## 6. Normalización de Calificaciones
+
+Cada instrumento tiene su propia fórmula, implementada como `GENERATED ALWAYS AS (...) STORED` en PostgreSQL para CA, PD, OC y AE. La calificación final también es GENERATED. Esto garantiza consistencia entre BD y aplicación.

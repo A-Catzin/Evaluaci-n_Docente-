@@ -1,29 +1,40 @@
-# Roadmap de Implementación - SED-360
+# Roadmap de Implementación — SED-360 v2
 
-Esta es la ruta de sprints recomendada para llevar la plataforma de 0 a Producción de manera iterativa y segura.
+## Fase 1: Setup e Infraestructura ✅
+- [x] Configurar Astro SSR + Tailwind + TypeScript
+- [x] Configurar Supabase (PostgreSQL, Auth Google)
+- [x] Crear esquema SQL v2 (15+ tablas, RLS, trigger)
+- [x] Implementar middleware 4 roles + dominio
+- [x] Layouts por rol (5 variantes)
+- [x] Servicios CRUD (5 archivos)
+- [x] Dashboards principales (4 roles)
+- [x] Páginas secundarias placeholder
 
-## Fase 1: Setup e Infraestructura Base (Semana 1)
-* [ ] Configurar Repositorio (Astro, Tailwind, TypeScript).
-* [ ] Configurar Proyecto Supabase (PostgreSQL, Auth Google).
-* [ ] Crear Esquema SQL Core (`usuarios`, `cargas_academicas`, `evaluaciones`).
-* [ ] Implementar Restricción RLS y Constraint de Voto Único (`unique_vote`).
-* [ ] Desarrollar Middleware de Astro para restringir dominio `@...edu.mx`.
+## Fase 2: Admin Dashboard Completo 🔲
+- [ ] Componentes UI (ScoreCard, RadarChart, DocenteCard)
+- [ ] Perfil detallado de docente con gráfico radar
+- [ ] Gráficas (donut categorías, barras instrumentos, línea histórico)
+- [ ] Gestión de docentes (CRUD completo)
+- [ ] Cierre de cuatrimestre + cálculo de calificaciones
 
-## Fase 2: Flujo del Evaluador (Semana 2)
-* [ ] Construir Layout Base y UI de Autenticación.
-* [ ] Generar vista "Mis Cargas" (Dashboard del evaluador).
-* [ ] Desarrollar Componente de Cuestionario Likert Interactivo.
-* [ ] Implementar Servicio de Captura (`INSERT` en `evaluaciones`).
-* [ ] Incorporar función utilitaria de Moderación de Textos (Filtro Blacklist).
+## Fase 3: Captura de Instrumentos 🔲
+- [ ] Formulario CA: 6 dimensiones, cálculo en tiempo real
+- [ ] Formulario PD: 11 criterios con selector visual
+- [ ] Formulario OC: 5 dimensiones con slider
+- [ ] Auto-evaluación docente: 10 ítems
+- [ ] Validación y guardado
 
-## Fase 3: Algoritmo 360 y Análisis (Semana 3)
-* [ ] Programar lógica TypeScript de Normalización Likert (Base 100).
-* [ ] Desarrollar Servicio de Ponderación (Alumno 35%, Técnico 25%, Coord 20%, etc.).
-* [ ] Crear Cron Job o Vista Materializada SQL para `resultados_agregados`.
-* [ ] Construir Tablero Administrativo para Coordinadores (Gráficos tipo Radar).
+## Fase 4: Encuesta Estudiantil 🔲
+- [ ] Wizard 4 pasos mobile-first
+- [ ] Paso 1: Calidad general (6 opciones visuales)
+- [ ] Paso 2: 18 ítems Likert en bloques
+- [ ] Paso 3: Comentario abierto
+- [ ] Paso 4: Confirmación y envío
+- [ ] Anonimato garantizado (tabla de control separada)
 
-## Fase 4: Pruebas, QA y Producción (Semana 4)
-* [ ] Test de Estrés (Simulación de concurrencia estudiantil masiva).
-* [ ] Auditoría de Anonimato (Verificación de desvinculación en interfaz de resultados).
-* [ ] Carga Inicial de Datos (Seed de Cargas Académicas del periodo actual).
-* [ ] Despliegue en Vercel y Configuración de Reglas WAF en Cloudflare.
+## Fase 5: QA y Producción 🔲
+- [ ] Seed data para pruebas
+- [ ] Pruebas de estrés (concurrencia)
+- [ ] Auditoría de anonimato
+- [ ] Despliegue en Vercel
+- [ ] Configuración Cloudflare WAF
