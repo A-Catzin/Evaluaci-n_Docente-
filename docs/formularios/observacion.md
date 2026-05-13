@@ -21,10 +21,10 @@ Durante la observación:
 * **(N/A)** No aplica.
 
 ### Campos Iniciales (Obligatorios *)
-1. **Nombre de Docente:** [Búsqueda en DB Tabla 'coordinadores' / Otros]
-2. **Nombre del Evaluador:** [Selección: Oriana Nah, Eslivet Aguilar, Mari Carmen Martínez / Otros]
+1. **Nombre de Docente:** [ Tabla de docentes y poder poner otro por si no esta en la base de datos]
+2. **Nombre del Evaluador:** [ Tabla de coordinadoresy Otros por si no es un codinador el que hace las observaciones]
 3. **Oferta académica en la que se observa al docente:** [Radio Button]
-    (Administración de Empresas, Administración de Empresas Turísticas, Arquitectura, Comercio Internacional, Contaduría Pública, Criminología y Criminalística, Derecho, Diseño Gráfico Digital, Enfermería, Mercadotecnia, Nutrición, Pedagogía, Sistemas Computacionales, Otros).
+    (Tabla de oferta academica).
 4. **Cuatrimestre del grupo:** [Radio Button]
     (Primer al Doceavo cuatrimestre, Otros).
 

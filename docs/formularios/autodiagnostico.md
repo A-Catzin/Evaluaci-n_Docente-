@@ -28,7 +28,8 @@ Agradecemos su participación y compromiso con el fortalecimiento de la calidad 
 * **Apellido Materno:** [Input Texto Corto]
 * **Campus asignado (según contrato):** [Radio Button]
     * Tecnológico Universitario Tuxtla
-    * Tecnológico Universitario Playacar / Facultad de Ciencias de la Salud
+    * Tecnológico Universitario Playacar 
+    * Facultad de Ciencias de la Salud
 
 ### Página 2: Datos Académicos
 * **Oferta académica:** [Checkboxes]
