@@ -4,33 +4,53 @@
 
 ```
 src/services/
-├── catalogos.ts      # cuatrimestres, licenciaturas, asignaturas
-├── docentes.ts       # docentes, grupos
-├── estudiantes.ts    # estudiantes, inscripciones
-├── instrumentos.ts   # EE, CA, PD, OC, AE
-└── calificaciones.ts # calificacion_final_docente
+├── catalogos.ts        # cuatrimestres, licenciaturas, asignaturas, ofertas, campus, turnos
+├── docentes.ts         # docentes, grupos
+├── estudiantes.ts      # estudiantes, inscripciones
+├── instrumentos.ts     # EE, CA, PD, OC, AE
+├── calificaciones.ts   # calificacion_final_docente
+├── autodiagnostico.ts  # auto-evaluación 24 reactivos
+├── observaciones.ts    # observación de clase 43 reactivos
+├── planeaciones.ts     # gestión de planeaciones + subida PDF
+└── usuarios.ts         # gestión de roles y perfiles
 ```
 
-Cada servicio encapsula las consultas a Supabase. Las páginas Astro NUNCA llaman a `supabase.from()` directamente.
+## 2. Subida de Archivos (Storage)
 
-## 2. Layouts por Rol
+**Patrón: Subida directa cliente → Supabase Storage**
+
+```
+Navegador                    Supabase Storage           Backend (Astro SSR)
+   │                              │                         │
+   ├─ selecciona PDF              │                         │
+   ├─ supabase.storage.upload()──→│                         │
+   │                              ├─ guarda archivo         │
+   │←────── URL pública ──────────┤                         │
+   │                              │                         │
+   ├─ POST /api/... con URL ──────────────────────────────→│
+   │                              │                         ├─ guarda registro BD
+```
+
+**Ventajas:**
+- El archivo NUNCA pasa por Vercel (ahorra bandwidth)
+- Subida directa más rápida
+- Supabase gestiona la seguridad del bucket
+
+## 3. Layouts por Rol
 
 ```
 src/layouts/
-├── BaseLayout.astro        # Shell HTML común (meta, fondos, CSS global)
-├── LayoutAdmin.astro       # Sidebar fijo para superadmin
-├── LayoutCoordinador.astro # Top nav para coordinador
-├── LayoutDocente.astro     # Top nav para docente
-└── LayoutEstudiante.astro  # Full-screen sin distracciones
+├── BaseLayout.astro        # Shell HTML común
+├── Layout.astro            # Páginas públicas (landing, auth)
+├── LayoutAdmin.astro       # Sidebar fijo
+├── LayoutCoordinador.astro # Top nav
+├── LayoutDocente.astro     # Top nav
+└── LayoutEstudiante.astro  # Full-screen
 ```
 
-## 3. Autorización (Middleware)
+## 4. Autorización (Middleware)
 
-El middleware `src/middleware.ts` valida en cada request:
-1. Cookies de sesión (sb-access-token, sb-refresh-token)
-2. Dominio `@tecplayacar.edu.mx`
-3. Rol autorizado para la ruta (mapa `ROLES_POR_RUTA`)
-
+Mapa `ROLES_POR_RUTA`:
 ```
 /admin/*        → superadmin
 /coordinador/*  → coordinador, superadmin
@@ -38,24 +58,25 @@ El middleware `src/middleware.ts` valida en cada request:
 /estudiante/*   → estudiante, superadmin
 ```
 
-## 4. Flujo de Autenticación
+## 5. Flujo de Autenticación
 
 ```
-/auth → Google OAuth → Supabase → /#access_token=...&refresh_token=...
-                                         ↓
-                              index.astro (script is:inline)
-                                         ↓
-                           POST /api/auth/guardar-sesion → cookies
-                                         ↓
-                              GET /api/auth/rol → redirigir según rol
+/auth → Google OAuth → Supabase → /#access_token=...
+    ↓
+POST /api/auth/guardar-sesion → cookies
+    ↓
+GET /api/auth/rol → redirigir según rol
 ```
 
-## 5. Anonimato de Encuesta Estudiantil
+## 6. Anonimato de Encuesta Estudiantil
 
 Dos tablas separadas:
-- `encuesta_estudiantil_respuestas` — SIN `estudiante_id`. Solo guarda docente_id, grupo_id, respuestas.
-- `encuesta_control_envio` — CON `estudiante_id`. Solo registra QUE respondió (UNIQUE).
+- `encuesta_estudiantil_respuestas` — SIN `estudiante_id`
+- `encuesta_control_envio` — CON `estudiante_id` (solo registra QUE respondió)
 
-## 6. Normalización de Calificaciones
+## 7. Limpieza de Archivos al Cerrar Ciclo
 
-Cada instrumento tiene su propia fórmula, implementada como `GENERATED ALWAYS AS (...) STORED` en PostgreSQL para CA, PD, OC y AE. La calificación final también es GENERATED. Esto garantiza consistencia entre BD y aplicación.
+Al finalizar un cuatrimestre, el superadmin ejecuta limpieza:
+- Borra prefijo `{cuatrimestre_id}/` del bucket `planeaciones`
+- Muestra cuántos archivos y MB se liberan
+- Solo superadmin puede ejecutarlo

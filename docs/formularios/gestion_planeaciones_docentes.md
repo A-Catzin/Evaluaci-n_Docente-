@@ -1,66 +1,155 @@
 # Especificaciones Técnicas: Sistema de Gestión de Planeaciones Didácticas (Ciclo 26-3)
 
-Este documento define la estructura técnica y funcional para el módulo de entrega y evaluación de planeaciones del **Tecnológico Universitario Playacar**.
-
----
+> Tecnológico Universitario Playacar — Plataforma SED-360 v2
 
 ## 1. Módulo del Docente (Buzón de Entrega)
-**Objetivo:** Permitir el registro individual de cada planeación por asignatura y grupo para el **Sistema de Evaluación del Desempeño Docente 360**.
 
-### Interfaz de Usuario y Campos Obligatorios:
-* **Identidad:** Captura automática del nombre, foto y correo institucional (`@tecplayacar.edu.mx`) mediante la cuenta de Google vinculada y su autodiagnostico
-* **Campus Asignado:** [Radio] Tecnológico Universitario Tuxtla / Tecnológico Universitario Playacar / Otros. Si ya se teniene con su autodiagnostico se completa en automatico 
-* **Licenciatura:** [Dropdown] (Ej: Sistemas Computacionales, Enfermería, Administración, etc.). Se saca segun su autodiagnostico
-* **Cuatrimestre:** [Dropdown] Del 1er al 12vo cuatrimestre.
-* **Turno y Modalidad:** [Radio] (Matutino/Vespertino) y (Escolarizada/Ejecutiva). Se saca segun su autodiagnostico 
-* **Asignatura y Grupo:** [Texto] Registro individual por cada grupo asignado.
-* **Preguntas de Integración Académica:**
-    * ¿Se genera algún proyecto en la asignatura? (Sí/No).
-    * ¿Integras uso de laboratorio? (Sí/No/No aplica).
-    * ¿Integra visitas académicas, empresariales o foros? (Sí/No/No aplica).
-* **Comentario:** [TextArea] Espacio opcional para observaciones adicionales.
+**Objetivo:** Permitir el registro individual de cada planeación por asignatura para el Sistema de Evaluación del Desempeño Docente 360°.
 
----
+### Interfaz de Usuario y Campos
 
-## 2. Estándares de Carga de Archivos
-El sistema debe validar los siguientes parámetros técnicos antes de procesar el envío a **Supabase Storage**:
+Todos los campos de identidad se precargan automáticamente desde el autodiagnóstico y Google OAuth:
 
-* **Formato Único:** PDF.
-* **Tamaño Máximo:** 100 MB.
-* **Nomenclatura Institucional Obligatoria:** `Asignatura_Grupo_Modalidad_ApellidoDocente_26-3.pdf`o si se puede cambiarle el nombre al archivo cuando lo suba para tener esa parte estandarizada 
-  *Ejemplo: Fundamentos_Enfermeria_3A_Escolarizada_Perez_26-3.pdf*.
+| Campo | Origen | Tipo |
+|-------|--------|------|
+| Nombre completo | `docentes.nombre + apellidos` | Auto |
+| Email institucional | `auth.users.email` | Auto |
+| Campus asignado | `docentes.campus` | Auto |
+| Oferta académica | `docentes.oferta_academica` | Dropdown (filtrado por carrera del docente) |
+| Cuatrimestre | `cuatrimestres` activo | Auto |
+| Turno y modalidad | `docentes.turno` | Auto |
+| **Asignatura** | `asignaturas` filtradas por carrera | **Dropdown (manual)** |
+| **Grupo** | Texto libre | **Manual** |
+| ¿Proyecto en la asignatura? | Sí/No | Radio |
+| ¿Integra laboratorio? | Sí/No/No aplica | Radio |
+| ¿Visitas académicas? | Sí/No/No aplica | Radio |
+| Comentario | Opcional | TextArea |
+| **Archivo PDF** | Subida | **File input** |
 
----
+### Múltiples planeaciones
 
-## 3. Calendario y Fechas Límite
-El sistema bloqueará automáticamente la subida de archivos según el calendario académico vigente:
+Un docente puede subir **una planeación por cada asignatura** que imparte. La unicidad es `(docente_id, cuatrimestre_id, asignatura_id)`.
 
-* **Docentes Continuantes:** Aun por definir por el administrador
-* **Docentes de Nuevo Ingreso:** Aun por definir por el administrador
+## 2. Subida de Archivos
 
----
+| Parámetro | Valor |
+|-----------|-------|
+| Formato | Solo PDF |
+| Tamaño máximo | 5 MB |
+| Nomenclatura | **Automática**: `{Asignatura}_{Grupo}_{Apellido}_{Ciclo}.pdf` |
+| Ejemplo | `Farmacologia_3A_Perez_26-3.pdf` |
+| Destino | Supabase Storage — bucket `planeaciones` |
+| Ruta | `{cuatrimestre_id}/{docente_id}/{archivo}.pdf` |
 
-## 4. Estructura de Datos (Supabase)
-Basado en la arquitectura del proyecto (Next.js + Supabase):
+### Flujo técnico
+1. Docente selecciona PDF en el formulario
+2. El navegador sube el archivo **directo a Supabase Storage** (no pasa por Vercel)
+3. Supabase devuelve la URL pública
+4. El formulario envía los metadatos + URL al backend
+5. Backend guarda registro en tabla `planeaciones`
 
-### Tabla: `planeaciones`
-| Campo | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `id` | uuid | Llave primaria. |
-| `docente_id` | uuid | FK -> `profiles(id)`. |
-| `campus` | text | Campus seleccionado. |
-| `licenciatura` | text | Carrera correspondiente. |
-| `url_pdf` | text | Ruta del archivo en el Storage Bucket. |
-| `estado` | enum | 'Pendiente', 'Aprobado', 'Corrección'. |
-| `comentarios_coordinador` | text | Obligatorio si el estado es 'Corrección'. |
+## 3. Módulo del Coordinador (Evaluación)
 
----
+El coordinador evalúa cada planeación con una **rúbrica de 4 criterios** (escala 1-5):
 
-## 5. Módulo del Coordinador (Evaluación)
-Los coordinadores evaluarán cada registro bajo una rúbrica de escala 1-5 que incluye:
-1. **Alineación Curricular.**
-2. **Secuencia Didáctica.**
-3. **Recursos y Materiales (NTIC).**
-4. **Sistemas de Evaluación.**
+| # | Criterio | Campo |
+|---|----------|-------|
+| 1 | Alineación Curricular | `criterio_alineacion` |
+| 2 | Secuencia Didáctica | `criterio_secuencia` |
+| 3 | Recursos y Materiales (NTIC) | `criterio_recursos` |
+| 4 | Sistemas de Evaluación | `criterio_evaluacion` |
 
-Si el estado se marca como **Corrección**, el sistema notificará al docente y habilitará el botón de "Re-subir archivo".
+### Cálculo del puntaje
+```
+Promedio = (c1 + c2 + c3 + c4) / 4
+Puntaje normalizado = (Promedio / 5) × 100
+```
+Este puntaje alimenta el campo **"Prom. Plan."** en la tabla de docentes del admin.
+
+### Estados
+| Estado | Significado |
+|--------|-------------|
+| `Pendiente` | Recién subida, sin evaluar |
+| `Aprobado` | Pasó la evaluación |
+| `Corrección` | Requiere cambios — el docente puede re-subir |
+
+### Retroalimentación
+- **Comentario para el docente** (opcional): visible para el docente en su dashboard
+- **Comentario interno** (opcional): solo visible para coordinadores
+
+## 4. Gestión de Asignaturas (Materias)
+
+El **admin** carga las materias desde `/admin/asignaturas`. Cada materia está ligada a una oferta académica:
+
+```
+ofertas_academicas (carreras)
+    └── asignaturas (materias por carrera)
+```
+
+En el formulario de planeación, el docente primero ve su carrera, y el dropdown de materias se filtra automáticamente.
+
+## 5. Limpieza de Archivos al Cerrar Ciclo
+
+Al finalizar un cuatrimestre, el **superadmin** puede liberar espacio:
+
+| Acción | Descripción |
+|--------|-------------|
+| **Endpoint** | `POST /api/admin/limpiar-archivos` |
+| **Qué borra** | Todos los archivos del bucket con prefijo `{cuatrimestre_id}/` |
+| **Confirmación** | Modal que muestra cuántos archivos y MB se eliminarán |
+| **Seguridad** | Solo superadmin |
+
+## 6. Estructura de Base de Datos
+
+### Modificar: `asignaturas`
+```sql
+ALTER TABLE asignaturas ADD COLUMN oferta_academica_id INT REFERENCES ofertas_academicas(id);
+```
+
+### Nueva tabla: `planeaciones`
+```sql
+CREATE TABLE planeaciones (
+  id SERIAL PRIMARY KEY,
+  docente_id INT REFERENCES docentes(id),
+  cuatrimestre_id INT REFERENCES cuatrimestres(id),
+  asignatura_id INT REFERENCES asignaturas(id),
+  campus TEXT, turno TEXT, modalidad TEXT,
+  grupo TEXT NOT NULL,
+  proyecto BOOLEAN DEFAULT false,
+  laboratorio VARCHAR(10) DEFAULT 'No aplica',
+  visitas VARCHAR(10) DEFAULT 'No aplica',
+  url_pdf TEXT NOT NULL,
+  nombre_archivo TEXT,
+  comentario_docente TEXT,
+  -- Evaluación del coordinador
+  criterio_alineacion SMALLINT CHECK (criterio_alineacion BETWEEN 1 AND 5),
+  criterio_secuencia SMALLINT CHECK (criterio_secuencia BETWEEN 1 AND 5),
+  criterio_recursos SMALLINT CHECK (criterio_recursos BETWEEN 1 AND 5),
+  criterio_evaluacion SMALLINT CHECK (criterio_evaluacion BETWEEN 1 AND 5),
+  puntaje_promedio DECIMAL(4,2),
+  estado VARCHAR(20) DEFAULT 'Pendiente' CHECK (estado IN ('Pendiente','Aprobado','Corrección')),
+  comentario_retroalimentacion TEXT,
+  comentario_interno TEXT,
+  fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  fecha_evaluacion TIMESTAMP,
+  UNIQUE(docente_id, cuatrimestre_id, asignatura_id)
+);
+```
+
+### RLS
+```sql
+ALTER TABLE planeaciones ENABLE ROW LEVEL SECURITY;
+-- Docente inserta/lee sus planeaciones
+CREATE POLICY "Docente gestiona sus planeaciones" ON planeaciones FOR ALL
+  USING (EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.entidad_id = docente_id AND u.rol = 'docente'));
+-- Coordinador/admin lee/evalúa todas
+CREATE POLICY "Staff lee y evalúa planeaciones" ON planeaciones FOR ALL
+  USING (public.rol_usuario(auth.uid()) IN ('superadmin','coordinador'));
+```
+
+### Supabase Storage Bucket
+```sql
+-- Crear bucket (desde dashboard de Supabase o vía API)
+-- Nombre: planeaciones
+-- Política: solo authenticated puede subir/leer
+```

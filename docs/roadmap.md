@@ -6,33 +6,47 @@
 - [x] Crear esquema SQL v2 (15+ tablas, RLS, trigger)
 - [x] Implementar middleware 4 roles + dominio
 - [x] Layouts por rol (5 variantes)
-- [x] Servicios CRUD (5 archivos)
+- [x] Servicios CRUD
 - [x] Dashboards principales (4 roles)
 - [x] Páginas secundarias placeholder
 
-## Fase 2: Admin Dashboard Completo 🔲
-- [ ] Componentes UI (ScoreCard, RadarChart, DocenteCard)
-- [ ] Perfil detallado de docente con gráfico radar
-- [ ] Gráficas (donut categorías, barras instrumentos, línea histórico)
-- [ ] Gestión de docentes (CRUD completo)
-- [ ] Cierre de cuatrimestre + cálculo de calificaciones
+## Fase 2: Admin Dashboard ✅
+- [x] Dashboard con KPIs, ranking docentes
+- [x] Gestión de docentes con buscador
+- [x] Gestión de usuarios con filtros por rol
+- [x] Gestión de roles (cambio rápido)
+- [x] Catálogos: ofertas académicas, campus, turnos
+- [x] Cuatrimestres
 
-## Fase 3: Captura de Instrumentos 🔲
-- [ ] Formulario CA: 6 dimensiones, cálculo en tiempo real
-- [ ] Formulario PD: 11 criterios con selector visual
-- [ ] Formulario OC: 5 dimensiones con slider
-- [ ] Auto-evaluación docente: 10 ítems
-- [ ] Validación y guardado
+## Fase 3: Autodiagnóstico Docente ✅
+- [x] Wizard 4 pasos (identificación, datos, 24 reactivos, cierre)
+- [x] Cálculo automático de nivel de desempeño
+- [x] Creación automática de perfil docente
+- [x] Modal de resultado con feedback
 
-## Fase 4: Encuesta Estudiantil 🔲
+## Fase 4: Observación de Clase ✅
+- [x] Formulario 43 reactivos en 8 secciones (A-H)
+- [x] Escala 1-5 + N/A
+- [x] Precarga automática desde perfil del docente
+- [x] Cálculo de promedio y alimentación a Prom. Obs.
+
+## Fase 5: Planeaciones Didácticas 🔲
+- [ ] Subida de PDFs a Supabase Storage (bucket `planeaciones`)
+- [ ] Formulario de planeación con datos precargados
+- [ ] Múltiples planeaciones por docente (una por materia)
+- [ ] Rúbrica del coordinador (4 criterios 1-5)
+- [ ] Cálculo automático → Prom. Plan. en dashboard admin
+- [ ] Estados: Pendiente / Aprobado / Corrección
+- [ ] Retroalimentación opcional para el docente
+- [ ] Gestión de asignaturas por carrera
+- [ ] Limpieza de archivos al cerrar cuatrimestre
+
+## Fase 6: Encuesta Estudiantil 🔲
 - [ ] Wizard 4 pasos mobile-first
-- [ ] Paso 1: Calidad general (6 opciones visuales)
-- [ ] Paso 2: 18 ítems Likert en bloques
-- [ ] Paso 3: Comentario abierto
-- [ ] Paso 4: Confirmación y envío
-- [ ] Anonimato garantizado (tabla de control separada)
+- [ ] 18 ítems Likert en bloques
+- [ ] Anonimato garantizado
 
-## Fase 5: QA y Producción 🔲
+## Fase 7: QA y Producción 🔲
 - [ ] Seed data para pruebas
 - [ ] Pruebas de estrés (concurrencia)
 - [ ] Auditoría de anonimato

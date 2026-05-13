@@ -1,6 +1,6 @@
 # 08 — Resumen de Implementación SED-360 v2
 
-> Documento final — Arquitectura v2 con 4 roles, 5 instrumentos, 15+ tablas.
+> Documento final — Arquitectura v2 con 4 roles, 5 instrumentos, 20+ tablas, Supabase Storage.
 
 ## Stack
 
@@ -9,61 +9,59 @@
 | Frontend | Astro SSR | 4.16.18 |
 | CSS | Tailwind CSS | 3.4.17 |
 | Backend/DB | Supabase (PostgreSQL) | — |
+| Storage | Supabase Storage (bucket `planeaciones`) | — |
 | Auth | Supabase Auth + Google OAuth | — |
 | Runtime | Node.js | 20.19.2 |
 
-## Arquitectura
+## Estado Actual (Mayo 2026)
 
-```
-src/
-├── layouts/    5 layouts (Base, Admin, Coordinador, Docente, Estudiante)
-├── services/   5 servicios CRUD (catalogos, docentes, estudiantes, instrumentos, calificaciones)
-├── pages/      4 dashboards + 8 páginas secundarias
-├── types/      18 interfaces TypeScript
-├── lib/        supabaseClient.ts (polyfill ws)
-└── middleware.ts  Dominio + autorización 4 roles
-```
-
-## Base de Datos (15+ tablas)
-
-- **Catálogo**: cuatrimestres, licenciaturas, docentes, asignaturas, grupos, estudiantes, inscripciones
-- **Auth**: usuarios (sync con auth.users, 4 roles)
-- **Instrumentos**: encuesta_estudiantil_respuestas (anónima), encuesta_control_envio, evaluacion_coordinacion, evaluacion_planeacion, observacion_clase, autoevaluacion_docente
-- **Resultados**: calificacion_final_docente (GENERATED)
+| Módulo | Estado | Archivos clave |
+|--------|--------|---------------|
+| Auth + Middleware 4 roles | ✅ | `middleware.ts`, `auth.astro` |
+| Admin Dashboard | ✅ | KPIs, docentes, usuarios, roles, catálogos |
+| Autodiagnóstico | ✅ | Wizard 4 pasos, 24 reactivos |
+| Observación de Clase | ✅ | 43 reactivos, 8 secciones, precarga automática |
+| Planeaciones | 🔲 | Subida PDF + rúbrica coordinador |
+| Encuesta Estudiantil | 🔲 | Wizard anónimo |
+| Limpieza archivos | 🔲 | Al cerrar cuatrimestre |
 
 ## Problemas Resueltos
 
 | Problema | Solución |
 |----------|----------|
-| WebSocket en Node 20 | `import ws from 'ws'` estático + polyfill |
+| WebSocket en Node 20 | `import ws from 'ws'` estático |
 | Code verifier PKCE perdido | Flujo implícito con hash → guardar-sesion |
 | RLS recursión infinita | Función `rol_usuario(uid)` SECURITY DEFINER |
 | Redirect siempre a estudiante | Endpoint `/api/auth/rol` + redirección inteligente |
-| Middleware crashea en dev | Import estático de ws (no createRequire dinámico) |
-| esbuild "componentes" | `is:inline` en scripts problemáticos |
+| Docente sin perfil | Creación automática al enviar autodiagnóstico |
+| Campus/Ofertas/Turnos hardcodeados | Tablas normalizadas + admin CRUD |
+| Observación sin precarga | Datos desde perfil docente |
 
-## Páginas y Rutas
+## Tablas de BD (20+)
 
-| Ruta | Acceso | Descripción |
-|------|--------|-------------|
-| `/` | Público | Landing + detector OAuth |
+- **Catálogo normalizado**: cuatrimestres, licenciaturas, ofertas_academicas, campus, turnos
+- **Entidades**: docentes, asignaturas, grupos, estudiantes, inscripciones
+- **Auth**: usuarios (4 roles)
+- **Evaluaciones**: autodiagnosticos (24 ítems), observaciones (43 ítems), planeaciones (PDF + 4 criterios)
+- **Resultados**: calificacion_final_docente
+- **Control**: encuesta_control_envio
+
+## Páginas Implementadas
+
+| Ruta | Rol | Descripción |
+|------|-----|-------------|
+| `/` | Público | Landing + OAuth |
 | `/auth` | Público | Login Google |
-| `/admin/dashboard` | superadmin | KPIs, ranking docentes |
-| `/admin/docentes` | superadmin | CRUD docentes |
+| `/admin/dashboard` | superadmin | KPIs, ranking |
+| `/admin/docentes` | superadmin | Gestión con buscador |
+| `/admin/usuarios` | superadmin | Tablas por rol con KPIs |
+| `/admin/roles` | superadmin | Cambio rápido de roles |
+| `/admin/ofertas` | superadmin | CRUD ofertas académicas |
+| `/admin/campus` | superadmin | CRUD campus |
+| `/admin/turnos` | superadmin | CRUD turnos |
 | `/admin/cuatrimestres` | superadmin | Gestión periodos |
-| `/coordinador/dashboard` | coord/superadmin | Panel de área |
-| `/coordinador/captura/*` | coord/superadmin | CA, PD, OC |
+| `/coordinador/dashboard` | coord/superadmin | Panel con docentes |
+| `/coordinador/captura/observacion` | coord | 43 reactivos |
 | `/docente/dashboard` | docente/coord/superadmin | Resultados |
-| `/docente/autoevaluacion` | docente | 10 ítems AE |
-| `/estudiante/dashboard` | estudiante/superadmin | Encuestas |
-| `/estudiante/encuesta/[id]` | estudiante | Wizard 4 pasos |
-
-## Para Ejecutar
-
-```bash
-git checkout feature/v2
-npm install
-# Configurar .env con credenciales Supabase
-# Ejecutar migraciones 001 y 002 en Supabase SQL Editor
-npm run dev
-```
+| `/docente/autodiagnostico` | docente | Wizard 4 pasos |
+| `/estudiante/dashboard` | estudiante | Encuestas |

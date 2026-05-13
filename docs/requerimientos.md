@@ -8,6 +8,7 @@
 | CSS | Tailwind CSS | 3.4.17 |
 | Backend/DB | Supabase (PostgreSQL) | — |
 | Auth | Supabase Auth + Google OAuth | — |
+| Storage | Supabase Storage (bucket `planeaciones`) | — |
 | Validación | Zod | — |
 | Gráficos | Chart.js (CDN) | — |
 | Despliegue | Vercel | — |
@@ -20,13 +21,16 @@
 - **Middleware**: Validación de dominio + autorización por rol en cada request
 - **Roles**: `superadmin`, `coordinador`, `docente`, `estudiante` (ENUM en tabla `usuarios`)
 
-## 3. Base de Datos (15+ tablas)
+## 3. Base de Datos (20+ tablas)
 
 ### Catálogo
 - `cuatrimestres` — Periodos académicos (clave, fechas, activo, cerrado)
 - `licenciaturas` — Carreras (clave, nombre, facultad)
-- `docentes` — Profesores (nombre, email, num_empleado, licenciatura)
-- `asignaturas` — Materias (clave, nombre, créditos)
+- `ofertas_academicas` — Catálogo de carreras (normalizado)
+- `campus` — Campus institucionales (normalizado)
+- `turnos` — Turnos académicos (normalizado)
+- `docentes` — Profesores (nombre, email, num_empleado, campus, turno, oferta, apellidos separados)
+- `asignaturas` — Materias (clave, nombre, créditos, ligadas a oferta_academica_id)
 - `grupos` — Grupos de clase (docente + asignatura + cuatrimestre)
 - `estudiantes` — Alumnos (nombre, email, matrícula, licenciatura)
 - `inscripciones` — Relación estudiante ↔ grupo (UNIQUE)
@@ -34,17 +38,26 @@
 ### Auth
 - `usuarios` — Sincronizado con `auth.users` (id UUID, email, rol, entidad_id)
 
-### Instrumentos (5)
+### Evaluaciones
+- `autodiagnosticos` — Auto-evaluación docente: 24 reactivos Likert 1-5
+- `observaciones` — Observación de clase: 43 reactivos en 8 secciones (A-H)
+- `planeaciones` — Gestión de planeaciones: subida PDF + rúbrica coordinador 4 criterios
 - `encuesta_estudiantil_respuestas` — EE: calidad_general (1-6) + 18 ítems Likert (1-4), ANÓNIMA
 - `encuesta_control_envio` — Control de envío (estudiante_id, grupo_id, UNIQUE)
-- `evaluacion_coordinacion` — CA: 0-75 puntos, 6 dimensiones, score_normalizado GENERATED
+- `evaluacion_coordinacion` — CA: 0-75 puntos, 6 dimensiones
 - `evaluacion_planeacion` — PD: 11 criterios 0-2, puntos_totales GENERATED
-- `observacion_clase` — OC: 0-10 puntos, 5 dimensiones, score_normalizado GENERATED
-- `autoevaluacion_docente` — AE: 10 ítems 1-3, score_normalizado GENERATED
+- `observacion_clase` — OC: 0-10 puntos, 5 dimensiones
+- `autoevaluacion_docente` — AE: 10 ítems 1-3
 
 ### Resultados
 - `calificacion_final_docente` — 5 scores individuales + calificación_final GENERATED + categoría
 
-## 4. Seguridad (RLS)
+## 4. Supabase Storage
 
-Todas las tablas tienen Row Level Security con políticas granulares por rol. Helper `rol_usuario(uid)` para consultas centralizadas. Ver `supabase/migrations/002_rls_v2.sql`.
+| Bucket | Uso | Tamaño máx/archivo |
+|--------|-----|-------------------|
+| `planeaciones` | PDFs de planeaciones docentes | 5 MB |
+
+- Subida directa del navegador a Supabase (sin pasar por Vercel)
+- Archivos organizados por: `{cuatrimestre_id}/{docente_id}/{archivo}.pdf`
+- Limpieza automática al cerrar cuatrimestre
