@@ -41,3 +41,6 @@ CREATE POLICY "Docente gestiona sus planeaciones" ON planeaciones FOR ALL
 
 CREATE POLICY "Staff lee y evalúa planeaciones" ON planeaciones FOR ALL
   USING (public.rol_usuario(auth.uid()) IN ('superadmin','coordinador'));
+
+-- Corregir: DECIMAL(5,2) permite 100.00
+ALTER TABLE planeaciones ALTER COLUMN puntaje_promedio TYPE DECIMAL(5,2);
