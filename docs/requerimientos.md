@@ -1,51 +1,63 @@
-# Blueprint Técnico: Plataforma SED-360 - v2.0
+# Blueprint Técnico: SED-360 v2
 
-Este documento define la arquitectura, lógica de negocio y estándares de seguridad para la plataforma institucional.
+## 1. Stack Tecnológico
 
-## 1. Stack Tecnológico (High Performance / Low Cost)
-Para maximizar la eficiencia operativa y soportar cientos de alumnos concurrentes:
-* **Frontend (UI):** **Astro** en modo SSR (Server Side Rendering) para rendimiento y carga ultrarrápida. Las interacciones de captura usarán React/Preact.
-* **Backend & DB:** **Supabase** (PostgreSQL) para la gestión relacional, triggers y políticas RLS.
-* **Autenticación:** **Google Auth** (Restringido al dominio institucional).
-* **Despliegue:** **Vercel** para integración continua.
-* **Seguridad DNS:** **Cloudflare** como escudo WAF contra ataques.
+| Capa | Tecnología | Versión |
+|------|-----------|---------|
+| Frontend | Astro SSR | 4.16.18 |
+| CSS | Tailwind CSS | 3.4.17 |
+| Backend/DB | Supabase (PostgreSQL) | — |
+| Auth | Supabase Auth + Google OAuth | — |
+| Storage | Supabase Storage (bucket `planeaciones`) | — |
+| Validación | Zod | — |
+| Gráficos | Chart.js (CDN) | — |
+| Despliegue | Vercel | — |
+| Seguridad DNS | Cloudflare WAF | — |
 
-## 2. Protocolo de Acceso Institucional
-El sistema implementa una política de "Dominio Cerrado":
-* Se permiten exclusivamente correos del dominio institucional (Ej: `@tecplayacar.edu.mx`).
-* El middleware de Astro verificará cada solicitud de página; si el usuario no tiene el dominio válido, se destruye la sesión y redirige al login.
+## 2. Autenticación
 
-## 3. Modelado de Datos Core (Esquema SQL)
-Para garantizar el soporte de concurrencia y prevenir fraude, se aplicará esta estructura base:
+- **Google OAuth**: Login exclusivo con cuentas Google del dominio `@tecplayacar.edu.mx`
+- **Flujo implícito**: Tokens en hash de URL → guardados en cookies via endpoint
+- **Middleware**: Validación de dominio + autorización por rol en cada request
+- **Roles**: `superadmin`, `coordinador`, `docente`, `estudiante` (ENUM en tabla `usuarios`)
 
-```sql
--- 1. Usuarios y Roles (Sincronizado con Auth)
-CREATE TABLE usuarios (
-    id UUID REFERENCES auth.users PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    rol VARCHAR(50) CHECK (rol IN ('alumno', 'docente', 'coordinador', 'tecnico', 'calidad', 'admin'))
-);
+## 3. Base de Datos (20+ tablas)
 
--- 2. El Nexo Central: Cargas Académicas
--- Relaciona al docente con la materia en un periodo específico.
-CREATE TABLE cargas_academicas (
-    id_carga SERIAL PRIMARY KEY,
-    id_docente UUID REFERENCES usuarios(id),
-    id_materia TEXT NOT NULL,
-    id_periodo TEXT NOT NULL,
-    UNIQUE (id_docente, id_materia, id_periodo)
-);
+### Catálogo
+- `cuatrimestres` — Periodos académicos (clave, fechas, activo, cerrado)
+- `licenciaturas` — Carreras (clave, nombre, facultad)
+- `ofertas_academicas` — Catálogo de carreras (normalizado)
+- `campus` — Campus institucionales (normalizado)
+- `turnos` — Turnos académicos (normalizado)
+- `docentes` — Profesores (nombre, email, num_empleado, campus, turno, oferta, apellidos separados)
+- `asignaturas` — Materias (clave, nombre, créditos, ligadas a oferta_academica_id)
+- `grupos` — Grupos de clase (docente + asignatura + cuatrimestre)
+- `estudiantes` — Alumnos (nombre, email, matrícula, licenciatura)
+- `inscripciones` — Relación estudiante ↔ grupo (UNIQUE)
 
--- 3. Captura de Evaluaciones (Normalizada para Escalabilidad)
-CREATE TABLE evaluaciones (
-    id_evaluacion SERIAL PRIMARY KEY,
-    id_evaluador UUID REFERENCES usuarios(id),
-    id_carga INT REFERENCES cargas_academicas(id_carga),
-    tipo_actor VARCHAR(20) CHECK (tipo_actor IN ('ALUMNO', 'COORDINADOR', 'TECNICO', 'CALIDAD', 'AUTO')),
-    puntaje_promedio DECIMAL(5,2),
-    comentario TEXT,
-    marcado_inapropiado BOOLEAN DEFAULT FALSE,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- Regla de prevención de fraude: Nadie vota dos veces la misma carga académica
-    CONSTRAINT unique_vote UNIQUE (id_evaluador, id_carga, tipo_actor)
-);
+### Auth
+- `usuarios` — Sincronizado con `auth.users` (id UUID, email, rol, entidad_id)
+
+### Evaluaciones
+- `autodiagnosticos` — Auto-evaluación docente: 24 reactivos Likert 1-5
+- `observaciones` — Observación de clase: 43 reactivos en 8 secciones (A-H)
+- `planeaciones` — Gestión de planeaciones: subida PDF + rúbrica coordinador 4 criterios
+- `encuesta_estudiantil_respuestas` — EE: calidad_general (1-6) + 18 ítems Likert (1-4), ANÓNIMA
+- `encuesta_control_envio` — Control de envío (estudiante_id, grupo_id, UNIQUE)
+- `evaluacion_coordinacion` — CA: 0-75 puntos, 6 dimensiones
+- `evaluacion_planeacion` — PD: 11 criterios 0-2, puntos_totales GENERATED
+- `observacion_clase` — OC: 0-10 puntos, 5 dimensiones
+- `autoevaluacion_docente` — AE: 10 ítems 1-3
+
+### Resultados
+- `calificacion_final_docente` — 5 scores individuales + calificación_final GENERATED + categoría
+
+## 4. Supabase Storage
+
+| Bucket | Uso | Tamaño máx/archivo |
+|--------|-----|-------------------|
+| `planeaciones` | PDFs de planeaciones docentes | 5 MB |
+
+- Subida directa del navegador a Supabase (sin pasar por Vercel)
+- Archivos organizados por: `{cuatrimestre_id}/{docente_id}/{archivo}.pdf`
+- Limpieza automática al cerrar cuatrimestre

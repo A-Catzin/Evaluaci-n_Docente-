@@ -41,10 +41,10 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
     <div class="w-full max-w-md bg-white rounded-3xl shadow-modal p-8 sm:p-10 animate-flotar-entrada">
       <!-- Logo / Identidad -->
       <div class="text-center mb-8">
-        <div class="w-16 h-16 mx-auto rounded-2xl bg-hero-institucional flex items-center justify-center shadow-tarjeta mb-4">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-hero-tup flex items-center justify-center shadow-tarjeta mb-4">
           <span class="text-white font-bold text-lg">360</span>
         </div>
-        <h1 class="text-2xl font-bold text-institucional">
+        <h1 class="text-2xl font-bold text-tup">
           Iniciar Sesión
         </h1>
         <p class="text-sm text-slate-500 mt-1">
@@ -102,7 +102,12 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
 </Layout>
 
 <script>
-  import { obtenerClienteSuperbase } from '../lib/supabaseClient';
+  import { createClient } from '@supabase/supabase-js';
+
+  const clienteNavegador = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
 
   const boton = document.getElementById('btn-google') as HTMLButtonElement | null;
   const textoBoton = document.getElementById('btn-texto') as HTMLSpanElement | null;
@@ -115,12 +120,10 @@ const MENSAJES_ERROR: Record<string, { titulo: string; descripcion: string }> = 
       boton.classList.add('opacity-60', 'cursor-not-allowed');
 
       try {
-        const cliente = obtenerClienteSuperbase();
-        await cliente.auth.signInWithOAuth({
+        // Sin redirectTo → Supabase redirige al Site URL configurado
+        // con los tokens en el hash: /#access_token=...&refresh_token=...
+        await clienteNavegador.auth.signInWithOAuth({
           provider: 'google',
-          options: {
-            redirectTo: window.location.origin + '/api/auth/callback',
-          },
         });
       } catch (err) {
         console.error('[SED-360 Auth] Error al iniciar OAuth:', err);

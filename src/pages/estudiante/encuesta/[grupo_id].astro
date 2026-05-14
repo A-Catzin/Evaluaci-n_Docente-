@@ -1,0 +1,7 @@
+---
+import LayoutEstudiante from '../../../layouts/LayoutEstudiante.astro';
+const { grupo_id } = Astro.params;
+---
+<LayoutEstudiante titulo="Encuesta">
+  <div class="animate-flotar-entrada w-full max-w-lg"><div class="bg-white rounded-3xl p-8 shadow-modal text-center text-slate-400"><p>Encuesta para grupo {grupo_id}</p><p class="text-sm mt-2">En desarrollo</p></div></div>
+</LayoutEstudiante>

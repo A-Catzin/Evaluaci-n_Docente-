@@ -1,31 +1,31 @@
-# Documentación Técnica — SED-360
+# Documentación Técnica — SED-360 v2
 
-> Plataforma de Evaluación Docente 360° — Tecnológico Universitario Playacar
+> Plataforma de Evaluación Docente 360° — TUP Playacar
 
 ## Índice de Módulos
 
-| # | Módulo | Archivo(s) | Fase |
-|---|--------|-----------|------|
-| 01 | [Esquema Core SQL](01-esquema-core.md) | `supabase/migrations/001_esquema_core.sql` | 1 |
-| 02 | [Tipos del Sistema](02-tipos-sistema.md) | `src/types/supabase.ts` | 1 |
-| 03 | [Cliente de Supabase](03-cliente-supabase.md) | `src/lib/supabaseClient.ts` | 1 |
-| 04 | [Normalización Likert](04-normalizacion-likert.md) | `src/utils/normalizacion.ts` | 1 |
-| 05 | [Servicio de Evaluaciones](05-servicio-evaluaciones.md) | `src/services/evaluaciones.ts` | 1 |
-| 06 | [Schemas de Validación](06-schemas-validacion.md) | `src/schemas/validacion.ts` | 1 |
-| 07 | [Middleware de Dominio](07-middleware-dominio.md) | `src/middleware.ts` | 1 |
+| # | Módulo | Archivo | Estado |
+|---|--------|---------|--------|
+| 01 | [Esquema Core SQL v2](01-esquema-core.md) | `supabase/migrations/001_esquema_v2.sql` | ⚠️ Legacy v1 |
+| 02 | [Tipos del Sistema v2](02-tipos-sistema.md) | `src/types/supabase.ts` | ⚠️ Legacy v1 |
+| 08 | [Resumen de Implementación](08-resumen-implementacion.md) | Completo | ✅ v2 |
 
-## Convenciones
+> **Nota**: Los documentos 01-07 son de la versión anterior (v1). Consultar `docs/sistema_evaluacion.md` y `docs/arquitecture_patterns.md` para la arquitectura v2 actual.
 
-- **Idioma**: Español para variables, funciones, comentarios y documentación.
-- **Naming**: `camelCase` (funciones/variables), `PascalCase` (componentes), `snake_case` (tablas SQL).
-- **Tipado**: TypeScript estricto, prohibido `any`.
-- **Seguridad**: Toda tabla SQL incluye políticas RLS. Errores técnicos nunca se exponen al usuario.
+## Convenciones v2
 
-## Stack
+- **Idioma**: Español (variables, funciones, comentarios)
+- **Naming**: `camelCase` (funciones), `PascalCase` (componentes), `snake_case` (SQL)
+- **Tipado**: TypeScript estricto, prohibido `any`
+- **Seguridad**: RLS en todas las tablas + middleware de dominio y roles
+- **Auth**: Google OAuth, flujo implícito con cookies
+
+## Stack v2
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | Astro 4 SSR + Tailwind CSS 3 |
+| Frontend | Astro 4.16.18 SSR + Tailwind CSS 3 |
 | Backend | Supabase (PostgreSQL + Auth + RLS) |
 | Validación | Zod |
+| Gráficos | Chart.js (CDN) |
 | Despliegue | Vercel + Cloudflare WAF |

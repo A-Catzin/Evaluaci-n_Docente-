@@ -1,26 +1,82 @@
-# Patrones de Arquitectura y Flujo de Datos - SED-360
+# Patrones de Arquitectura — SED-360 v2
 
-Este documento establece la estructura lógica para separar responsabilidades y evitar cuellos de botella en la base de datos.
+## 1. Service Layer
 
-## 1. Patrón de Escalabilidad: "Separación de Escritura y Lectura"
-Debido a que la evaluación estudiantil suele ocurrir de forma masiva en las últimas semanas del periodo:
-* **Flujo de Captura (High-Write):** La aplicación cliente (Astro) se limita a hacer `INSERT` sobre la tabla `evaluaciones`. No hace cálculos pesados en el momento.
-* **Flujo de Reporte (Low-Read):** Se utilizará una tabla secundaria consolidada (`resultados_agregados`). Esta se alimentará mediante un *Cron Job* nocturno o una *Materialized View* en PostgreSQL. Esto asegura que el Dashboard del Admin o Coordinador cargue en milisegundos sin calcular miles de filas en vivo.
+```
+src/services/
+├── catalogos.ts        # cuatrimestres, licenciaturas, asignaturas, ofertas, campus, turnos
+├── docentes.ts         # docentes, grupos
+├── estudiantes.ts      # estudiantes, inscripciones
+├── instrumentos.ts     # EE, CA, PD, OC, AE
+├── calificaciones.ts   # calificacion_final_docente
+├── autodiagnostico.ts  # auto-evaluación 24 reactivos
+├── observaciones.ts    # observación de clase 43 reactivos
+├── planeaciones.ts     # gestión de planeaciones + subida PDF
+└── usuarios.ts         # gestión de roles y perfiles
+```
 
-## 2. Metodología Likert y Normalización a Base 100
-Para poder sumar las respuestas de escala Likert (1 a 5) y combinarlas con porcentajes de rúbricas, aplicamos la fórmula de normalización matemática:
+## 2. Subida de Archivos (Storage)
 
-**Fórmula Institucional:** `Resultado = ((Valor_obtenido - 1) / (Valor_max - 1)) * 100`
+**Patrón: Subida directa cliente → Supabase Storage**
 
-**Implementación en Service Layer (TypeScript):**
-```typescript
-/**
- * Normaliza un valor de escala Likert (ej. 1-5) a un porcentaje (0-100).
- * Ej: Un voto de 4 (De acuerdo) en escala de 5 -> ((4-1)/(5-1))*100 = 75%
- */
-export const normalizarLikert = (valorObtenido: number, valorMaximo: number = 5): number => {
-    if (valorObtenido < 1 || valorObtenido > valorMaximo) {
-        throw new Error("Valor fuera del rango Likert permitido");
-    }
-    return ((valorObtenido - 1) / (valorMaximo - 1)) * 100;
-};
+```
+Navegador                    Supabase Storage           Backend (Astro SSR)
+   │                              │                         │
+   ├─ selecciona PDF              │                         │
+   ├─ supabase.storage.upload()──→│                         │
+   │                              ├─ guarda archivo         │
+   │←────── URL pública ──────────┤                         │
+   │                              │                         │
+   ├─ POST /api/... con URL ──────────────────────────────→│
+   │                              │                         ├─ guarda registro BD
+```
+
+**Ventajas:**
+- El archivo NUNCA pasa por Vercel (ahorra bandwidth)
+- Subida directa más rápida
+- Supabase gestiona la seguridad del bucket
+
+## 3. Layouts por Rol
+
+```
+src/layouts/
+├── BaseLayout.astro        # Shell HTML común
+├── Layout.astro            # Páginas públicas (landing, auth)
+├── LayoutAdmin.astro       # Sidebar fijo
+├── LayoutCoordinador.astro # Top nav
+├── LayoutDocente.astro     # Top nav
+└── LayoutEstudiante.astro  # Full-screen
+```
+
+## 4. Autorización (Middleware)
+
+Mapa `ROLES_POR_RUTA`:
+```
+/admin/*        → superadmin
+/coordinador/*  → coordinador, superadmin
+/docente/*      → docente, superadmin, coordinador
+/estudiante/*   → estudiante, superadmin
+```
+
+## 5. Flujo de Autenticación
+
+```
+/auth → Google OAuth → Supabase → /#access_token=...
+    ↓
+POST /api/auth/guardar-sesion → cookies
+    ↓
+GET /api/auth/rol → redirigir según rol
+```
+
+## 6. Anonimato de Encuesta Estudiantil
+
+Dos tablas separadas:
+- `encuesta_estudiantil_respuestas` — SIN `estudiante_id`
+- `encuesta_control_envio` — CON `estudiante_id` (solo registra QUE respondió)
+
+## 7. Limpieza de Archivos al Cerrar Ciclo
+
+Al finalizar un cuatrimestre, el superadmin ejecuta limpieza:
+- Borra prefijo `{cuatrimestre_id}/` del bucket `planeaciones`
+- Muestra cuántos archivos y MB se liberan
+- Solo superadmin puede ejecutarlo
