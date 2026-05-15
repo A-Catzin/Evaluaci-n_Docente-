@@ -508,7 +508,7 @@ SET apellido_paterno = SPLIT_PART(apellidos, ' ', 1),
 WHERE apellido_paterno IS NULL AND apellidos IS NOT NULL;
 
 -- 2. Tabla de autodiagnósticos
-CREATE TABLE IF NOT EXISTS autodiagnosticos (
+DROP TABLE IF EXISTS autodiagnosticos CASCADE; CREATE TABLE autodiagnosticos (
   id                SERIAL PRIMARY KEY,
   docente_id        INT REFERENCES docentes(id),
   cuatrimestre_id   INT REFERENCES cuatrimestres(id),
@@ -586,7 +586,7 @@ CREATE POLICY "Usuario actualiza su perfil" ON public.usuarios
 -- Migración 006: Catálogo de Ofertas Académicas
 -- Tabla reutilizable en todos los formularios
 
-CREATE TABLE IF NOT EXISTS ofertas_academicas (
+DROP TABLE IF EXISTS ofertas_academicas CASCADE; CREATE TABLE ofertas_academicas (
   id      SERIAL PRIMARY KEY,
   nombre  VARCHAR(100) NOT NULL UNIQUE,
   activa  BOOLEAN DEFAULT TRUE
@@ -605,7 +605,7 @@ INSERT INTO ofertas_academicas (nombre) VALUES
 ON CONFLICT (nombre) DO NOTHING;
 -- Migración 007: Catálogos de Campus y Turnos
 
-CREATE TABLE IF NOT EXISTS campus (
+DROP TABLE IF EXISTS campus CASCADE; CREATE TABLE campus (
   id      SERIAL PRIMARY KEY,
   nombre  VARCHAR(100) NOT NULL UNIQUE,
   activo  BOOLEAN DEFAULT TRUE
@@ -622,7 +622,7 @@ INSERT INTO campus (nombre) VALUES
 ON CONFLICT (nombre) DO NOTHING;
 
 -- Turnos
-CREATE TABLE IF NOT EXISTS turnos (
+DROP TABLE IF EXISTS turnos CASCADE; CREATE TABLE turnos (
   id      SERIAL PRIMARY KEY,
   nombre  VARCHAR(50) NOT NULL UNIQUE,
   activo  BOOLEAN DEFAULT TRUE
@@ -640,7 +640,7 @@ ON CONFLICT (nombre) DO NOTHING;
 -- 43 reactivos en 8 secciones (A-H)
 -- =============================================================
 
-CREATE TABLE IF NOT EXISTS observaciones (
+DROP TABLE IF EXISTS observaciones CASCADE; CREATE TABLE observaciones (
   id                SERIAL PRIMARY KEY,
   docente_id        INT REFERENCES docentes(id),
   evaluador_id      UUID REFERENCES usuarios(id),
@@ -697,7 +697,7 @@ CREATE POLICY "Docente lee sus observaciones" ON observaciones
 ALTER TABLE asignaturas ADD COLUMN IF NOT EXISTS oferta_academica_id INT REFERENCES ofertas_academicas(id);
 
 -- 2. Tabla de planeaciones
-CREATE TABLE IF NOT EXISTS planeaciones (
+DROP TABLE IF EXISTS planeaciones CASCADE; CREATE TABLE planeaciones (
   id SERIAL PRIMARY KEY,
   docente_id INT REFERENCES docentes(id),
   cuatrimestre_id INT REFERENCES cuatrimestres(id),
@@ -795,7 +795,7 @@ CREATE POLICY "Docente lee su evaluación" ON evaluacion_coordinacion FOR SELECT
 
 CREATE INDEX idx_ec_docente ON evaluacion_coordinacion(docente_id);
 -- Migración 011: Tabla de preguntas editables para instrumentos
-CREATE TABLE IF NOT EXISTS instrumento_preguntas (
+DROP TABLE IF EXISTS instrumento_preguntas CASCADE; CREATE TABLE instrumento_preguntas (
   id SERIAL PRIMARY KEY,
   instrumento VARCHAR(50) NOT NULL, -- 'autodiagnostico','observacion','coordinacion','planeacion','encuesta'
   seccion VARCHAR(10),              -- 'A','B', etc. o NULL
